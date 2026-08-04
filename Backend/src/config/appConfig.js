@@ -1,0 +1,23 @@
+module.exports={
+    REDIS_PREFIX:'sconnect:',
+    ACCESS_TOKEN_TTL:'15m',
+    ACCESS_TOKEN_MS:15*60*1000,
+    REFRESH_TOKEN_TTL:'7d',
+    REFRESH_TOKEN_MS:7*24*60*60*1000,
+    RESET_TOKEN_MS:30*60*1000,
+    ITEMS_PER_PAGE:10,
+    ROLES:['admin','teacher','student','parent'],
+    USER_STATUS:['pending','approved','suspended'],
+    DAYS:['monday','tuesday','wednesday','thursday','friday','saturday'],
+    ATTENDANCE_STATUS:['present','absent','late','excused'],
+    LOW_ATTENDANCE_THRESHOLD:75,
+    GRADE_BANDS:[
+        {min:90,grade:'A+',points:10},
+        {min:80,grade:'A',points:9},
+        {min:70,grade:'B',points:8},
+        {min:60,grade:'C',points:7},
+        {min:50,grade:'D',points:6},
+        {min:40,grade:'E',points:5},
+        {min:0,grade:'F',points:0}
+    ]
+};
