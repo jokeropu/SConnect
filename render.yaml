@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: sconnect-backend
+    runtime: node
+    rootDir: Backend
+    plan: free
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        sync: false
+      - key: DB_CONNECT_STRING
+        sync: false
+      - key: JWT_ACCESS_KEY
+        sync: false
+      - key: JWT_REFRESH_KEY
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        sync: false
+      - key: REDIS_PASS
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: TURNSTILE_SECRET_KEY
+        sync: false
+      - key: SENDER_GMAIL
+        sync: false
+      - key: SENDER_PASSWORD
+        sync: false
+      - key: OAUTH_CLIENT_ID
+        sync: false
+      - key: OAUTH_CLIENT_SECRET
+        sync: false
