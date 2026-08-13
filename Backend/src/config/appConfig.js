@@ -11,6 +11,10 @@ module.exports={
     DAYS:['monday','tuesday','wednesday','thursday','friday','saturday'],
     ATTENDANCE_STATUS:['present','absent','late','excused'],
     LOW_ATTENDANCE_THRESHOLD:75,
+    QUIZ_STATUS:['draft','published','closed'],
+    QUIZ_QUESTION_TYPES:['single','multiple','text','integer'],
+    QUIZ_ATTEMPT_STATUS:['in-progress','submitted'],
+    QUIZ_GRACE_MS:30*1000,
     GRADE_BANDS:[
         {min:90,grade:'A+',points:10},
         {min:80,grade:'A',points:9},

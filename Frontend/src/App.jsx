@@ -18,6 +18,11 @@ import Subjects from './pages/Subjects';
 import Classes from './pages/Classes';
 import Lessons from './pages/Lessons';
 import Exams from './pages/Exams';
+import Quizzes from './pages/Quizzes';
+import QuizBuilder from './pages/QuizBuilder';
+import TakeQuiz from './pages/TakeQuiz';
+import QuizReview from './pages/QuizReview';
+import QuizResults from './pages/QuizResults';
 import Assignments from './pages/Assignments';
 import AssignmentDetail from './pages/AssignmentDetail';
 import Results from './pages/Results';
@@ -74,6 +79,12 @@ function App() {
       <Route path="/list/classes" element={<RequireAuth roles={STAFF}><Classes /></RequireAuth>} />
       <Route path="/list/lessons" element={<RequireAuth roles={STAFF}><Lessons /></RequireAuth>} />
       <Route path="/list/exams" element={<RequireAuth roles={ALL}><Exams /></RequireAuth>} />
+      <Route path="/list/quizzes" element={<RequireAuth roles={ALL}><Quizzes /></RequireAuth>} />
+      <Route path="/quizzes/new" element={<RequireAuth roles={STAFF}><QuizBuilder /></RequireAuth>} />
+      <Route path="/quizzes/:id/edit" element={<RequireAuth roles={STAFF}><QuizBuilder /></RequireAuth>} />
+      <Route path="/quizzes/:id/take" element={<RequireAuth roles={['student']}><TakeQuiz /></RequireAuth>} />
+      <Route path="/quizzes/:id/review" element={<RequireAuth roles={ALL}><QuizReview /></RequireAuth>} />
+      <Route path="/quizzes/:id/results" element={<RequireAuth roles={STAFF}><QuizResults /></RequireAuth>} />
       <Route path="/list/assignments" element={<RequireAuth roles={ALL}><Assignments /></RequireAuth>} />
       <Route path="/assignments/:id" element={<RequireAuth roles={ALL}><AssignmentDetail /></RequireAuth>} />
       <Route path="/list/results" element={<RequireAuth roles={ALL}><Results /></RequireAuth>} />
