@@ -7,7 +7,7 @@ import { useListQuery } from '../utils/useListQuery';
 import { PageCard, Table, Row, Pagination, RoundIcon, Loader, EmptyState, Note, FormRow, Input, Textarea, Select, Button, Chip } from '../design/primitives';
 import { Modal, ConfirmModal } from '../design/Modal';
 import { toast } from '../design/Toaster';
-import { formatDate } from '../design/cn';
+import { formatDate, ownsRecord } from '../design/cn';
 import EventCalendar from '../components/EventCalendar';
 
 const EMPTY = { title: '', description: '', audience: 'all', classId: '', category: 'general', startTime: '', endTime: '' };
@@ -105,7 +105,9 @@ export default function Events() {
                   <td className="hidden px-2 lg:table-cell">{item.classId?.name || 'Whole school'}</td>
                   {canEdit && (
                     <td className="px-2">
-                      <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+                      {ownsRecord(user, item.createdBy) && (
+                        <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+                      )}
                     </td>
                   )}
                 </Row>

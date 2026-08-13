@@ -26,6 +26,8 @@ const stripAnswers=(question)=>({
     options:question.options.map((option)=>({_id:option._id,text:option.text}))
 });
 
+const isOwner=(user,quiz)=>user.role==='admin' || String(quiz.createdBy)===String(user._id);
+
 const deadlineFor=(quiz,attempt)=>{
     const byTimer=new Date(attempt.startedAt).getTime()+quiz.timeLimit*60*1000;
     const byWindow=new Date(quiz.endTime).getTime();
@@ -248,7 +250,9 @@ const updateQuiz=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        await assertClassAccess(req.result,quiz.classId);
+        if(!isOwner(req.result,quiz)){
+            return res.status(403).json({error:"Only the teacher who created this quiz can edit it"});
+        }
 
         const {title,description,startTime,endTime,timeLimit,negativeMarking,questions}=req.body;
 
@@ -288,7 +292,9 @@ const deleteQuiz=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        await assertClassAccess(req.result,quiz.classId);
+        if(!isOwner(req.result,quiz)){
+            return res.status(403).json({error:"Only the teacher who created this quiz can delete it"});
+        }
 
         await Quiz.findOneAndDelete({_id:quiz._id});
         res.status(200).json({message:"Quiz deleted successfully"});
@@ -309,7 +315,9 @@ const setQuizStatus=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        await assertClassAccess(req.result,quiz.classId);
+        if(!isOwner(req.result,quiz)){
+            return res.status(403).json({error:"Only the teacher who created this quiz can change its status"});
+        }
 
         if(status==='draft' && quiz.status!=='draft'){
             const attemptCount=await QuizAttempt.countDocuments({quizId:quiz._id});

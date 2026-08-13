@@ -173,10 +173,24 @@ const createEvent=async(req,res)=>{
 
 const updateEvent=async(req,res)=>{
     try{
-        const event=await Event.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});
+        const event=await Event.findById(req.params.id);
         if(!event){
             return res.status(404).json({error:"Event not found"});
         }
+        if(req.result.role!=='admin' && String(event.createdBy)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the person who created this event can edit it"});
+        }
+
+        const allowed=['title','description','category','startTime','endTime'];
+        for(const key of allowed){
+            if(req.body[key]!==undefined) event[key]=req.body[key];
+        }
+
+        if(new Date(event.endTime)<=new Date(event.startTime)){
+            throw new Error("endTime must be after startTime");
+        }
+
+        await event.save();
         res.status(200).json({event,message:"Event updated"});
     }
     catch(err){
@@ -186,10 +200,15 @@ const updateEvent=async(req,res)=>{
 
 const deleteEvent=async(req,res)=>{
     try{
-        const event=await Event.findByIdAndDelete(req.params.id);
+        const event=await Event.findById(req.params.id);
         if(!event){
             return res.status(404).json({error:"Event not found"});
         }
+        if(req.result.role!=='admin' && String(event.createdBy)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the person who created this event can delete it"});
+        }
+
+        await Event.findByIdAndDelete(event._id);
         res.status(200).json({message:"Event deleted"});
     }
     catch(err){

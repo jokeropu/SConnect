@@ -284,10 +284,31 @@ const createLesson=async(req,res)=>{
 
 const updateLesson=async(req,res)=>{
     try{
-        const lesson=await Lesson.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});
+        const lesson=await Lesson.findById(req.params.id);
         if(!lesson){
             return res.status(404).json({error:"Lesson not found"});
         }
+        if(req.result.role!=='admin' && String(lesson.teacherId)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the teacher who takes this lesson can edit it"});
+        }
+
+        const allowed=['name','subjectId','day','startTime','endTime','room'];
+        for(const key of allowed){
+            if(req.body[key]!==undefined) lesson[key]=req.body[key];
+        }
+
+        const clash=await Lesson.findOne({
+            _id:{$ne:lesson._id},
+            classId:lesson.classId,
+            day:lesson.day,
+            startTime:{$lt:lesson.endTime},
+            endTime:{$gt:lesson.startTime}
+        });
+        if(clash){
+            throw new Error(`That slot clashes with "${clash.name}" on ${clash.day}`);
+        }
+
+        await lesson.save();
         res.status(200).json({lesson,message:"Lesson updated successfully"});
     }
     catch(err){
@@ -297,10 +318,15 @@ const updateLesson=async(req,res)=>{
 
 const deleteLesson=async(req,res)=>{
     try{
-        const lesson=await Lesson.findByIdAndDelete(req.params.id);
+        const lesson=await Lesson.findById(req.params.id);
         if(!lesson){
             return res.status(404).json({error:"Lesson not found"});
         }
+        if(req.result.role!=='admin' && String(lesson.teacherId)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the teacher who takes this lesson can delete it"});
+        }
+
+        await Lesson.findByIdAndDelete(lesson._id);
         res.status(200).json({message:"Lesson deleted successfully"});
     }
     catch(err){
