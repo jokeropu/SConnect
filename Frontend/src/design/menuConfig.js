@@ -1,6 +1,6 @@
 import {
   Home, GraduationCap, Users, UserRound, BookOpen, School, CalendarDays,
-  FileText, ClipboardList, BarChart3, CheckSquare, CalendarCheck,
+  FileText, ClipboardList, BarChart3, CheckSquare, CalendarCheck, ListChecks,
   MessageSquare, Megaphone, FolderOpen, User, Settings, LogOut,
 } from 'lucide-react';
 
@@ -16,6 +16,7 @@ export const MENU = [
       { icon: School, label: 'Classes', to: '/list/classes', visible: ['admin', 'teacher'] },
       { icon: CalendarDays, label: 'Lessons', to: '/list/lessons', visible: ['admin', 'teacher'] },
       { icon: FileText, label: 'Exams', to: '/list/exams', visible: ['admin', 'teacher', 'student', 'parent'] },
+      { icon: ListChecks, label: 'Quizzes', to: '/list/quizzes', visible: ['admin', 'teacher', 'student', 'parent'] },
       { icon: ClipboardList, label: 'Assignments', to: '/list/assignments', visible: ['admin', 'teacher', 'student', 'parent'] },
       { icon: BarChart3, label: 'Results', to: '/list/results', visible: ['admin', 'teacher', 'student', 'parent'] },
       { icon: CheckSquare, label: 'Attendance', to: '/list/attendance', visible: ['admin', 'teacher', 'student', 'parent'] },

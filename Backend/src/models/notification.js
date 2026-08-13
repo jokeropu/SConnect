@@ -10,6 +10,8 @@ const NOTIFICATION_TYPES=[
     'assignment_graded',
     'exam_scheduled',
     'result_published',
+    'quiz_published',
+    'quiz_closed',
     'attendance_absent',
     'attendance_low',
     'announcement_posted',

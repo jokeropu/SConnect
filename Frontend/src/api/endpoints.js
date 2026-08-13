@@ -72,6 +72,21 @@ export const examApi = {
   publish: (id) => unwrap(axiosClient.post(`/exams/${id}/publish`)),
 };
 
+export const quizApi = {
+  list: (params) => unwrap(axiosClient.get('/quizzes', { params })),
+  byId: (id) => unwrap(axiosClient.get(`/quizzes/${id}`)),
+  create: (payload) => unwrap(axiosClient.post('/quizzes', payload)),
+  update: (id, payload) => unwrap(axiosClient.put(`/quizzes/${id}`, payload)),
+  remove: (id) => unwrap(axiosClient.delete(`/quizzes/${id}`)),
+  setStatus: (id, status) => unwrap(axiosClient.patch(`/quizzes/${id}/status`, { status })),
+  start: (id) => unwrap(axiosClient.post(`/quizzes/${id}/start`)),
+  submit: (id, responses) => unwrap(axiosClient.post(`/quizzes/${id}/submit`, { responses })),
+  myAttempts: (params) => unwrap(axiosClient.get('/quizzes/attempts/mine', { params })),
+  review: (id, studentId) =>
+    unwrap(axiosClient.get(`/quizzes/${id}/review`, { params: studentId ? { studentId } : undefined })),
+  results: (id) => unwrap(axiosClient.get(`/quizzes/${id}/results`)),
+};
+
 export const resultApi = {
   list: (params) => unwrap(axiosClient.get('/results', { params })),
   reportCard: (studentId) =>
