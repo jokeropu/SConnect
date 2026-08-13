@@ -8,7 +8,7 @@ import { useListQuery, useDebounced } from '../utils/useListQuery';
 import { PageCard, Table, Row, TableSearch, Pagination, RoundIcon, Loader, EmptyState, Note, Button, Chip } from '../design/primitives';
 import { ConfirmModal } from '../design/Modal';
 import { toast } from '../design/Toaster';
-import { formatDate } from '../design/cn';
+import { formatDate, ownsRecord } from '../design/cn';
 
 const STATUS_TONE = {
   draft: 'bg-gray-100 text-gray-600',
@@ -137,19 +137,23 @@ export default function Quizzes() {
         ) : (
           <div className="flex items-center gap-2">
             <RoundIcon icon={BarChart3} label="Results" onClick={() => navigate(`/quizzes/${item._id}/results`)} />
-            {item.status === 'draft' && (
-              <RoundIcon icon={Send} tone="yellow" label="Publish" onClick={() => setStatus(item, 'published')} />
-            )}
-            {item.status === 'published' && (
-              <RoundIcon icon={Lock} tone="yellow" label="Close quiz" onClick={() => setStatus(item, 'closed')} />
-            )}
-            {item.status === 'draft' && (
-              <RoundIcon icon={Pencil} tone="yellow" label="Edit" onClick={() => navigate(`/quizzes/${item._id}/edit`)} />
-            )}
             {item.status === 'closed' && (
               <RoundIcon icon={Eye} label="Review answers" onClick={() => navigate(`/quizzes/${item._id}/review`)} />
             )}
-            <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+            {ownsRecord(user, item.createdBy) && (
+              <>
+                {item.status === 'draft' && (
+                  <>
+                    <RoundIcon icon={Send} tone="yellow" label="Publish" onClick={() => setStatus(item, 'published')} />
+                    <RoundIcon icon={Pencil} tone="yellow" label="Edit" onClick={() => navigate(`/quizzes/${item._id}/edit`)} />
+                  </>
+                )}
+                {item.status === 'published' && (
+                  <RoundIcon icon={Lock} tone="yellow" label="Close quiz" onClick={() => setStatus(item, 'closed')} />
+                )}
+                <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+              </>
+            )}
           </div>
         )}
       </td>

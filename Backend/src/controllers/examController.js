@@ -68,10 +68,24 @@ const createExam=async(req,res)=>{
 
 const updateExam=async(req,res)=>{
     try{
-        const exam=await Exam.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});
+        const exam=await Exam.findById(req.params.id);
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
+        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the teacher who created this exam can edit it"});
+        }
+
+        const allowed=['title','subjectId','term','startTime','endTime','maxMarks','passMarks','room'];
+        for(const key of allowed){
+            if(req.body[key]!==undefined) exam[key]=req.body[key];
+        }
+
+        if(new Date(exam.endTime)<=new Date(exam.startTime)){
+            throw new Error("endTime must be after startTime");
+        }
+
+        await exam.save();
         res.status(200).json({exam,message:"Exam updated successfully"});
     }
     catch(err){
@@ -81,10 +95,15 @@ const updateExam=async(req,res)=>{
 
 const deleteExam=async(req,res)=>{
     try{
-        const exam=await Exam.findByIdAndDelete(req.params.id);
+        const exam=await Exam.findById(req.params.id);
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
+        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the teacher who created this exam can delete it"});
+        }
+
+        await Exam.findByIdAndDelete(exam._id);
         res.status(200).json({message:"Exam deleted successfully"});
     }
     catch(err){
@@ -142,6 +161,9 @@ const publishResults=async(req,res)=>{
         const exam=await Exam.findById(req.params.id);
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
+        }
+        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
+            return res.status(403).json({error:"Only the teacher who created this exam can publish its results"});
         }
         if(exam.resultsPublished){
             return res.status(400).json({error:"Results are already published"});

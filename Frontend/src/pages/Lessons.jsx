@@ -7,7 +7,7 @@ import { useListQuery } from '../utils/useListQuery';
 import { PageCard, Table, Row, Pagination, RoundIcon, Loader, EmptyState, Note, FormRow, Input, Select, Button } from '../design/primitives';
 import { Modal, ConfirmModal } from '../design/Modal';
 import { toast } from '../design/Toaster';
-import { fullName } from '../design/cn';
+import { fullName, ownsRecord } from '../design/cn';
 import BigCalendar from '../components/BigCalendar';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -119,8 +119,12 @@ export default function Lessons() {
       {canEdit && (
         <td className="px-2">
           <div className="flex items-center gap-2">
-            <RoundIcon icon={Pencil} tone="yellow" label="Edit" onClick={() => openEdit(item)} />
-            <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+            {ownsRecord(user, item.teacherId) && (
+              <>
+                <RoundIcon icon={Pencil} tone="yellow" label="Edit" onClick={() => openEdit(item)} />
+                <RoundIcon icon={Trash2} tone="purple" label="Delete" onClick={() => setPendingDelete(item)} />
+              </>
+            )}
           </div>
         </td>
       )}
