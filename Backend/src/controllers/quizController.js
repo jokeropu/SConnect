@@ -1,12 +1,38 @@
 const Quiz=require('../models/quiz');
 const QuizAttempt=require('../models/quizAttempt');
+const Result=require('../models/result');
 const StudentProfile=require('../models/studentProfile');
 const Classroom=require('../models/classroom');
+const {scoreBreakdown}=require('../utils/gradeUtility');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
 const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent}=require('../utils/scope');
-const {QUIZ_GRACE_MS}=require('../config/appConfig');
+const {QUIZ_GRACE_MS,QUIZ_RESULT_WEIGHT}=require('../config/appConfig');
+
+// Mirrors a submitted attempt into the shared Result collection so quizzes show
+// up on the report card alongside exams, at a fraction of the weight. Negative
+// marking can push a score below zero, which Result does not allow, so it floors.
+const recordQuizResult=async(quiz,attempt)=>{
+    const marksObtained=Math.max(0,attempt.score);
+    const maxMarks=Math.max(1,attempt.totalMarks || quiz.totalMarks);
+    const {percentage,grade,points}=scoreBreakdown(marksObtained,maxMarks);
+
+    await Result.findOneAndUpdate(
+        {quizId:quiz._id,studentId:attempt.studentId},
+        {$set:{
+            marksObtained,
+            maxMarks,
+            percentage,
+            grade,
+            points,
+            weight:QUIZ_RESULT_WEIGHT,
+            remarks:`Quiz: ${quiz.title}`,
+            enteredBy:quiz.createdBy
+        }},
+        {new:true,upsert:true,setDefaultsOnInsert:true}
+    );
+};
 
 const normalizeText=(value)=>String(value ?? '').trim().toUpperCase().replace(/\s+/g,' ');
 
@@ -345,6 +371,7 @@ const setQuizStatus=async(req,res)=>{
                 attempt.submittedAt=new Date();
                 attempt.timeTakenMs=Date.now()-new Date(attempt.startedAt).getTime();
                 await attempt.save();
+                await recordQuizResult(quiz,attempt);
             }
 
             const profiles=await StudentProfile.find({classId:quiz.classId}).select('userId');
@@ -453,6 +480,7 @@ const submitQuiz=async(req,res)=>{
         attempt.timeTakenMs=now-new Date(attempt.startedAt).getTime();
         attempt.autoSubmitted=now>deadline+QUIZ_GRACE_MS;
         await attempt.save();
+        await recordQuizResult(quiz,attempt);
 
         res.status(200).json({
             message:"Quiz submitted",

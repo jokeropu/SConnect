@@ -25,7 +25,7 @@ export default function ReportCard() {
   if (error) return <div className="p-4"><Note tone="error">{error}</Note></div>;
   if (!payload) return <Loader label="Building report card" />;
 
-  const { summary, subjects } = payload;
+  const { summary, subjects, weighted } = payload;
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -38,6 +38,11 @@ export default function ReportCard() {
 
       <Card>
         <h1 className="text-lg font-semibold">Subject breakdown</h1>
+        {weighted && (
+          <p className="mt-1 text-xs text-gray-400">
+            Percentages are weighted — quizzes count for a fraction of an exam, so they differ from the raw marks shown.
+          </p>
+        )}
 
         {subjects.length === 0 ? (
           <EmptyState title="Nothing published yet" detail="Once exam results are published they are summarised here." />
@@ -51,9 +56,10 @@ export default function ReportCard() {
                     <p className="text-xs text-gray-400">{entry.subject.code}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-600">
-                      {entry.obtained}/{entry.max} ({entry.percentage}%)
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-medium text-gray-700">{entry.percentage}%</span>
+                      <span className="text-[11px] text-gray-400">{entry.obtained}/{entry.max} marks</span>
+                    </div>
                     <Chip className={`bg-gray-100 ${GRADE_TONE[entry.grade] || 'text-gray-600'}`}>{entry.grade}</Chip>
                   </div>
                 </div>

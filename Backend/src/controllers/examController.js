@@ -223,7 +223,11 @@ const listResults=async(req,res)=>{
         }
 
         const [results,total]=await Promise.all([
-            Result.find(query).populate({path:'examId',select:'title term startTime subjectId',populate:{path:'subjectId',select:'name code'}}).populate('studentId','firstName lastName email').sort({createdAt:-1}).skip(skip).limit(limit),
+            Result.find(query)
+                .populate({path:'examId',select:'title term startTime subjectId',populate:{path:'subjectId',select:'name code'}})
+                .populate({path:'quizId',select:'title subjectId',populate:{path:'subjectId',select:'name code'}})
+                .populate('studentId','firstName lastName email')
+                .sort({createdAt:-1}).skip(skip).limit(limit),
             Result.countDocuments(query)
         ]);
 
@@ -249,32 +253,52 @@ const reportCard=async(req,res)=>{
         }
 
         const publishedExams=await Exam.find({resultsPublished:true}).distinct('_id');
-        const results=await Result.find({studentId,examId:{$in:publishedExams}}).populate({
-            path:'examId',
-            select:'title term maxMarks subjectId',
-            populate:{path:'subjectId',select:'name code'}
-        });
+        const results=await Result.find({
+            studentId,
+            $or:[{examId:{$in:publishedExams}},{quizId:{$ne:null}}]
+        })
+            .populate({
+                path:'examId',
+                select:'title term maxMarks subjectId',
+                populate:{path:'subjectId',select:'name code'}
+            })
+            .populate({
+                path:'quizId',
+                select:'title subjectId',
+                populate:{path:'subjectId',select:'name code'}
+            });
 
         const summary=buildReportCard(results);
         const bySubject={};
 
         for(const result of results){
-            const subject=result.examId?.subjectId;
+            const subject=result.examId?.subjectId || result.quizId?.subjectId;
             const key=subject?String(subject._id):'other';
             if(!bySubject[key]){
-                bySubject[key]={subject:subject?{name:subject.name,code:subject.code}:{name:'Other',code:'—'},results:[],obtained:0,max:0};
+                bySubject[key]={subject:subject?{name:subject.name,code:subject.code}:{name:'Other',code:'—'},results:[],obtained:0,max:0,weightedObtained:0,weightedMax:0};
             }
+            const weight=result.weight??1;
             bySubject[key].results.push(result);
             bySubject[key].obtained+=result.marksObtained;
             bySubject[key].max+=result.maxMarks;
+            bySubject[key].weightedObtained+=result.marksObtained*weight;
+            bySubject[key].weightedMax+=result.maxMarks*weight;
         }
 
+        // The subject grade uses the weighted totals so it lines up with the
+        // overall summary; obtained/max stay raw so the marks still read true.
         const subjects=Object.values(bySubject).map((entry)=>{
-            const {percentage,grade}=scoreBreakdown(entry.obtained,entry.max);
-            return {...entry,percentage,grade};
+            const {weightedObtained,weightedMax,...rest}=entry;
+            const {percentage,grade}=scoreBreakdown(weightedObtained,weightedMax);
+            return {...rest,percentage,grade};
         });
 
-        res.status(200).json({studentId,summary,subjects});
+        res.status(200).json({
+            studentId,
+            summary,
+            subjects,
+            weighted:results.some((r)=>(r.weight??1)!==1)
+        });
     }
     catch(err){
         res.status(500).json({error:err.message});
