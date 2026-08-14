@@ -48,8 +48,6 @@ const resultSchema=new Schema({
         type:String,
         default:''
     },
-    // How much this result counts toward the report card. Exams sit at 1;
-    // quizzes are deliberately worth a fraction of that.
     weight:{
         type:Number,
         default:1,

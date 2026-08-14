@@ -28,8 +28,6 @@ export default function TakeQuiz() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
 
-  // Offset between server clock and this device's clock, so a wrong local
-  // clock cannot buy extra time. The deadline itself is enforced server-side.
   const skewRef = useRef(0);
   const submittedRef = useRef(false);
 
@@ -73,7 +71,6 @@ export default function TakeQuiz() {
           try {
             setResponses(JSON.parse(saved));
           } catch {
-            /* corrupt draft, start clean */
           }
         }
       })

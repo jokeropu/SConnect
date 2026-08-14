@@ -12,8 +12,6 @@ const scoreBreakdown=(marksObtained,maxMarks)=>{
     return {percentage,grade,points};
 };
 
-// Each result carries a weight so a quiz can count for a fraction of an exam.
-// Rows written before weight existed have no value, hence the fallback to 1.
 const weightOf=(result)=>(result.weight??1);
 
 const buildReportCard=(results)=>{
@@ -34,8 +32,6 @@ const buildReportCard=(results)=>{
         ?Math.round((results.reduce((sum,r)=>sum+r.points*weightOf(r),0)/weightTotal)*100)/100
         :0;
 
-    // totalObtained/totalMax stay unweighted so the report card can still show
-    // the raw marks a student actually scored.
     return {totalObtained,totalMax,percentage,grade,gpa};
 };
 
