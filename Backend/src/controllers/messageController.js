@@ -173,9 +173,6 @@ const sendMessage=async(req,res)=>{
     }
 };
 
-// The same rules canMessage applies to one target, expressed as query clauses so
-// the whole contact list resolves in a handful of queries instead of a few per
-// candidate. Returns null when the role may contact nobody.
 const contactClausesFor=async(user)=>{
     if(user.role==='teacher'){
         const classIds=await classIdsForTeacher(user._id);

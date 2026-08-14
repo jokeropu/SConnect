@@ -271,8 +271,6 @@ const createLesson=async(req,res)=>{
             return res.status(403).json({error:accessErr.message});
         }
 
-        // Creating a lesson grants the named teacher access to the class through
-        // their profile, so only an admin may put someone else on the timetable.
         const teacherId=req.result.role==='admin'?req.body.teacherId:req.result._id;
 
         const clash=await Lesson.findOne({

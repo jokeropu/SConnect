@@ -9,8 +9,6 @@ export const initials = (first, last) =>
 export const fullName = (user) =>
   user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '—';
 
-// Mirrors the backend rule: only the creator (or an admin) may edit or delete a
-// record. Accepts either a populated owner object or a raw id.
 export const ownsRecord = (user, owner) => {
   if (!user) return false;
   if (user.role === 'admin') return true;

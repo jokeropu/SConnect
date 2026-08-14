@@ -11,9 +11,6 @@ const {LOW_ATTENDANCE_THRESHOLD,LOW_ATTENDANCE_MIN_RECORDS,LOW_ATTENDANCE_NOTICE
 
 const todayString=(date=new Date())=>date.toISOString().slice(0,10);
 
-// Warns students whose overall attendance has dropped below the threshold.
-// Called after attendance is recorded, never from a read, and rate limited per
-// student so re-saving a sheet does not pile up duplicate warnings.
 const flagLowAttendance=async(studentIds)=>{
     if(studentIds.length===0){
         return;
@@ -71,8 +68,6 @@ const markAttendance=async(req,res)=>{
             throw new Error("No attendance records provided");
         }
 
-        // Correcting and re-saving a sheet must not re-announce students who were
-        // already marked absent on it, so only the newly absent are notified.
         const previous=await Attendance.findOne({classId,date,lessonId:lessonId || null}).select('records');
         const alreadyAbsent=new Set(
             (previous?.records || []).filter((r)=>r.status==='absent').map((r)=>String(r.studentId))

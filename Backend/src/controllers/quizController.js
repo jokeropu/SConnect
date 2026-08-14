@@ -10,9 +10,6 @@ const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
 const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent}=require('../utils/scope');
 const {QUIZ_GRACE_MS,QUIZ_RESULT_WEIGHT}=require('../config/appConfig');
 
-// Mirrors a submitted attempt into the shared Result collection so quizzes show
-// up on the report card alongside exams, at a fraction of the weight. Negative
-// marking can push a score below zero, which Result does not allow, so it floors.
 const recordQuizResult=async(quiz,attempt)=>{
     const marksObtained=Math.max(0,attempt.score);
     const maxMarks=Math.max(1,attempt.totalMarks || quiz.totalMarks);
@@ -257,7 +254,6 @@ const getQuiz=async(req,res)=>{
             if(quiz.status==='draft'){
                 return res.status(403).json({error:"This quiz is not available yet"});
             }
-            // The answer key stays hidden until the quiz closes for everyone.
             if(!quiz.isOver()){
                 plain.questions=quiz.questions.map(stripAnswers);
             }

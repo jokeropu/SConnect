@@ -285,8 +285,6 @@ const reportCard=async(req,res)=>{
             bySubject[key].weightedMax+=result.maxMarks*weight;
         }
 
-        // The subject grade uses the weighted totals so it lines up with the
-        // overall summary; obtained/max stay raw so the marks still read true.
         const subjects=Object.values(bySubject).map((entry)=>{
             const {weightedObtained,weightedMax,...rest}=entry;
             const {percentage,grade}=scoreBreakdown(weightedObtained,weightedMax);

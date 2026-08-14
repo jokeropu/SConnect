@@ -54,8 +54,6 @@ const notificationSchema=new Schema({
 
 notificationSchema.index({userId:1,createdAt:-1});
 
-// Notifications are transient nudges, so MongoDB expires them rather than
-// letting the collection grow for the life of the deployment.
 notificationSchema.index({createdAt:1},{expireAfterSeconds:NOTIFICATION_TTL_SECONDS});
 
 const Notification=mongoose.model("notification",notificationSchema);

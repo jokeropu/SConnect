@@ -28,7 +28,6 @@ const requireFields=(data,fields)=>{
     }
 };
 
-// Keeps request bodies from writing fields the caller has no business setting.
 const pickFields=(data,fields)=>{
     const picked={};
     for(const field of fields){
