@@ -174,6 +174,12 @@ function LearnerView() {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {summary.belowThreshold && (
+        <Note tone="warning">
+          Your attendance is {summary.percentage}%, below the required {summary.threshold}%.
+        </Note>
+      )}
+
       <div className="flex flex-wrap gap-4">
         <UserCard type="attendance %" count={summary.percentage} />
         <UserCard type="present" count={summary.present} tone="teachers" />
