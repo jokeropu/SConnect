@@ -113,8 +113,8 @@ npm install react-router react-redux @reduxjs/toolkit axios socket.io-client rea
 ## 3. Run
 
 ```bash
-cd Backend  && npm run dev     # http://localhost:3000
-cd Frontend && npm run dev     # http://localhost:5173
+cd Backend  && npm run dev     # http://localhost:4000
+cd Frontend && npm run dev     # http://localhost:5174
 ```
 
 Seed the first admin (there is no signup path to admin):

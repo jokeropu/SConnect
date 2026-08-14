@@ -1,6 +1,11 @@
 import axios from 'axios';
 
-const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3000') + '/api';
+// Single source of truth for where the API lives. socket.io needs the bare
+// origin, everything else talks to /api under it. Default matches the port the
+// backend falls back to in Backend/src/index.js.
+export const API_ORIGIN = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+
+const baseURL = `${API_ORIGIN}/api`;
 
 let accessToken = null;
 let refreshPromise = null;
