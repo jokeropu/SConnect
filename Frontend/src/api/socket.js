@@ -1,14 +1,12 @@
 import { io } from 'socket.io-client';
-import { getAccessToken } from './axiosClient';
-
-const URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+import { getAccessToken, API_ORIGIN } from './axiosClient';
 
 let socket = null;
 
 export const connectSocket = () => {
   if (socket?.connected) return socket;
 
-  socket = io(URL, {
+  socket = io(API_ORIGIN, {
     withCredentials: true,
     autoConnect: true,
     auth: { token: getAccessToken() },

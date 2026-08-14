@@ -280,7 +280,7 @@ const forgotPassword=async(req,res)=>{
             user.resetPasswordExpires=Date.now()+RESET_TOKEN_MS;
             await user.save();
 
-            const clientUrl=(process.env.CLIENT_URL || 'http://localhost:5173').split(',')[0].trim();
+            const clientUrl=(process.env.CLIENT_URL || 'http://localhost:5174').split(',')[0].trim();
             const resetLink=`${clientUrl}/reset-password/${rawToken}`;
 
             await sendEmail({

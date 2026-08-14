@@ -31,7 +31,7 @@ const notificationRouter=require('./routes/notifications');
 const materialRouter=require('./routes/materials');
 const dashboardRouter=require('./routes/dashboard');
 
-const allowedOrigins=(process.env.CLIENT_URL || 'http://localhost:5173')
+const allowedOrigins=(process.env.CLIENT_URL || 'http://localhost:5174,http://localhost:5173')
     .split(',')
     .map((o)=>o.trim());
 
