@@ -85,6 +85,7 @@ export const quizApi = {
   review: (id, studentId) =>
     unwrap(axiosClient.get(`/quizzes/${id}/review`, { params: studentId ? { studentId } : undefined })),
   results: (id) => unwrap(axiosClient.get(`/quizzes/${id}/results`)),
+  resultsCsv: (id) => unwrap(axiosClient.get(`/quizzes/${id}/results/csv`, { responseType: 'blob' })),
 };
 
 export const resultApi = {

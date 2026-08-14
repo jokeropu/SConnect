@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ArrowLeft, Eye, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { quizApi } from '../api/endpoints';
 import { errorMessage } from '../api/axiosClient';
 import { Card, CardHead, Loader, Note, Button, Chip, Table, Row, Avatar, EmptyState } from '../design/primitives';
+import { toast } from '../design/Toaster';
 import { cn, formatDate, fullName, initials } from '../design/cn';
 
 const Stat = ({ label, value, hint }) => (
@@ -21,6 +22,7 @@ export default function QuizResults() {
 
   const [payload, setPayload] = useState(null);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     quizApi
@@ -28,6 +30,27 @@ export default function QuizResults() {
       .then(setPayload)
       .catch((err) => setError(errorMessage(err)));
   }, [id]);
+
+  const downloadCsv = async () => {
+    setDownloading(true);
+    try {
+      const blob = await quizApi.resultsCsv(id);
+      const slug =
+        (payload?.quiz?.title || 'quiz').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'quiz';
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${slug}-results.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -100,9 +123,14 @@ export default function QuizResults() {
         <CardHead
           title={quiz.title}
           right={
-            <Button tone="quiet" size="sm" onClick={() => navigate('/list/quizzes')}>
-              <ArrowLeft className="h-4 w-4" /> Back
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button tone="outline" size="sm" onClick={downloadCsv} loading={downloading}>
+                <Download className="h-4 w-4" /> Export CSV
+              </Button>
+              <Button tone="quiet" size="sm" onClick={() => navigate('/list/quizzes')}>
+                <ArrowLeft className="h-4 w-4" /> Back
+              </Button>
+            </div>
           }
         />
         <p className="text-xs text-gray-500">

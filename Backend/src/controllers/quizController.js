@@ -555,6 +555,88 @@ const reviewQuiz=async(req,res)=>{
     }
 };
 
+const csvCell=(value)=>{
+    let text=value===null || value===undefined?'':String(value);
+    if(/^[=+\-@\t\r]/.test(text)){
+        text=`'${text}`;
+    }
+    return /[",\n\r]/.test(text)?`"${text.replace(/"/g,'""')}"`:text;
+};
+
+const csvRow=(cells)=>cells.map(csvCell).join(',');
+
+const exportQuizResults=async(req,res)=>{
+    try{
+        const quiz=await Quiz.findById(req.params.id)
+            .populate('subjectId','name code')
+            .populate('classId','name gradeLevel section');
+
+        if(!quiz){
+            return res.status(404).json({error:"Quiz not found"});
+        }
+        await assertClassAccess(req.result,quiz.classId._id || quiz.classId);
+
+        const attempts=await QuizAttempt.find({quizId:quiz._id,status:'submitted'})
+            .populate('studentId','firstName lastName email')
+            .sort({score:-1,timeTakenMs:1});
+
+        const roster=await StudentProfile.find({classId:quiz.classId._id || quiz.classId})
+            .populate('userId','firstName lastName email');
+
+        const attempted=new Set(attempts.map((a)=>String(a.studentId?._id)));
+
+        const header=[
+            'Rank','Student','Email','Status','Score','Total Marks','Percentage',
+            'Submitted At','Time Taken (s)','Auto Submitted',
+            ...quiz.questions.map((q,i)=>`Q${i+1} (${q.marks})`)
+        ];
+
+        const rows=attempts.map((attempt,index)=>{
+            const total=attempt.totalMarks || quiz.totalMarks;
+            const percentage=total>0?Math.round((attempt.score/total)*10000)/100:0;
+
+            return csvRow([
+                index+1,
+                `${attempt.studentId?.firstName || ''} ${attempt.studentId?.lastName || ''}`.trim(),
+                attempt.studentId?.email,
+                'Submitted',
+                attempt.score,
+                total,
+                percentage,
+                attempt.submittedAt?new Date(attempt.submittedAt).toISOString():'',
+                Math.round((attempt.timeTakenMs || 0)/1000),
+                attempt.autoSubmitted?'yes':'no',
+                ...quiz.questions.map((question)=>{
+                    const answer=attempt.answers.find((a)=>String(a.questionId)===String(question._id));
+                    return answer?answer.marksAwarded:0;
+                })
+            ]);
+        });
+
+        const missing=roster
+            .filter((profile)=>profile.userId && !attempted.has(String(profile.userId._id)))
+            .map((profile)=>csvRow([
+                '',
+                `${profile.userId.firstName || ''} ${profile.userId.lastName || ''}`.trim(),
+                profile.userId.email,
+                'Not attempted',
+                '','',
+                '','','','',
+                ...quiz.questions.map(()=>'')
+            ]));
+
+        const csv='\uFEFF'+[csvRow(header),...rows,...missing].join('\r\n')+'\r\n';
+        const slug=(quiz.title || 'quiz').replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'').toLowerCase() || 'quiz';
+
+        res.setHeader('Content-Type','text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition',`attachment; filename="${slug}-results.csv"`);
+        res.status(200).send(csv);
+    }
+    catch(err){
+        res.status(400).json({error:err.message});
+    }
+};
+
 const quizResults=async(req,res)=>{
     try{
         const quiz=await Quiz.findById(req.params.id)
@@ -617,4 +699,4 @@ const quizResults=async(req,res)=>{
     }
 };
 
-module.exports={listQuizzes,createQuiz,getQuiz,updateQuiz,deleteQuiz,setQuizStatus,startAttempt,submitQuiz,myAttempts,reviewQuiz,quizResults};
+module.exports={listQuizzes,createQuiz,getQuiz,updateQuiz,deleteQuiz,setQuizStatus,startAttempt,submitQuiz,myAttempts,reviewQuiz,quizResults,exportQuizResults};
