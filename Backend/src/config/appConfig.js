@@ -14,6 +14,8 @@ module.exports={
     LOW_ATTENDANCE_MIN_RECORDS:10,
     LOW_ATTENDANCE_NOTICE_COOLDOWN_MS:7*24*60*60*1000,
     NOTIFICATION_TTL_SECONDS:90*24*60*60,
+    // Quizzes feed the report card but count for a fraction of an exam.
+    QUIZ_RESULT_WEIGHT:0.1,
     QUIZ_STATUS:['draft','published','closed'],
     QUIZ_QUESTION_TYPES:['single','multiple','text','integer'],
     QUIZ_ATTEMPT_STATUS:['in-progress','submitted'],

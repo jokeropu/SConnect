@@ -14,7 +14,7 @@ export default function Results() {
   const { data, meta, loading, error } = useListQuery(resultApi.list, { page }, [page]);
 
   const columns = [
-    { header: 'Exam', accessor: 'exam' },
+    { header: 'Assessment', accessor: 'exam' },
     ...(user?.role === 'student' ? [] : [{ header: 'Student', accessor: 'student', className: 'hidden md:table-cell' }]),
     { header: 'Score', accessor: 'score', className: 'hidden md:table-cell' },
     { header: 'Grade', accessor: 'grade' },
@@ -24,8 +24,14 @@ export default function Results() {
   const renderRow = (item) => (
     <Row key={item._id}>
       <td className="p-4">
-        <span className="font-semibold">{item.examId?.title || 'Assignment'}</span>
-        <p className="text-xs text-gray-500">{item.examId?.subjectId?.name}</p>
+        <div className="flex items-center gap-2">
+          <span className="font-semibold">{item.examId?.title || item.quizId?.title || 'Assignment'}</span>
+          {item.quizId && <Chip className="bg-lama-sky-light text-sky-700">Quiz</Chip>}
+        </div>
+        <p className="text-xs text-gray-500">
+          {(item.examId?.subjectId || item.quizId?.subjectId)?.name}
+          {item.quizId && ` · counts ${Math.round((item.weight ?? 1) * 100)}% toward the report card`}
+        </p>
       </td>
       {user?.role !== 'student' && <td className="hidden px-2 md:table-cell">{fullName(item.studentId)}</td>}
       <td className="hidden px-2 md:table-cell">

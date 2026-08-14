@@ -150,6 +150,7 @@ quizSchema.methods.isOpen=function(){
 quizSchema.post('findOneAndDelete',async function(quiz){
     if(quiz){
         await mongoose.model('quizAttempt').deleteMany({quizId:quiz._id});
+        await mongoose.model('result').deleteMany({quizId:quiz._id});
     }
 });
 
