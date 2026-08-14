@@ -28,4 +28,13 @@ const requireFields=(data,fields)=>{
     }
 };
 
-module.exports={validateRegistration,validateObjectId,requireFields};
+// Keeps request bodies from writing fields the caller has no business setting.
+const pickFields=(data,fields)=>{
+    const picked={};
+    for(const field of fields){
+        if(data[field]!==undefined) picked[field]=data[field];
+    }
+    return picked;
+};
+
+module.exports={validateRegistration,validateObjectId,requireFields,pickFields};

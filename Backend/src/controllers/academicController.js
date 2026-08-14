@@ -5,7 +5,10 @@ const StudentProfile=require('../models/studentProfile');
 const TeacherProfile=require('../models/teacherProfile');
 const User=require('../models/user');
 const notify=require('../utils/notify');
-const {requireFields}=require('../utils/validate');
+const {requireFields,pickFields}=require('../utils/validate');
+
+const CLASS_FIELDS=['name','gradeLevel','section','capacity','academicYear','supervisorId','subjects'];
+const SUBJECT_FIELDS=['name','code','description','teachers','classes'];
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
 const {visibleClassIds,assertClassAccess}=require('../utils/scope');
 
@@ -60,7 +63,7 @@ const getClassById=async(req,res)=>{
 const createClass=async(req,res)=>{
     try{
         requireFields(req.body,['name','gradeLevel','capacity','academicYear']);
-        const classroom=await Classroom.create(req.body);
+        const classroom=await Classroom.create(pickFields(req.body,CLASS_FIELDS));
 
         if(classroom.supervisorId){
             await TeacherProfile.findOneAndUpdate({userId:classroom.supervisorId},{$addToSet:{classes:classroom._id}},{upsert:true});
@@ -76,7 +79,7 @@ const createClass=async(req,res)=>{
 
 const updateClass=async(req,res)=>{
     try{
-        const classroom=await Classroom.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});
+        const classroom=await Classroom.findByIdAndUpdate(req.params.id,{$set:pickFields(req.body,CLASS_FIELDS)},{new:true,runValidators:true});
         if(!classroom){
             return res.status(404).json({error:"Class not found"});
         }
@@ -157,7 +160,7 @@ const listSubjects=async(req,res)=>{
 const createSubject=async(req,res)=>{
     try{
         requireFields(req.body,['name','code']);
-        const subject=await Subject.create(req.body);
+        const subject=await Subject.create(pickFields(req.body,SUBJECT_FIELDS));
 
         if(Array.isArray(req.body.teachers)){
             await TeacherProfile.updateMany({userId:{$in:req.body.teachers}},{$addToSet:{subjects:subject._id}});
@@ -172,7 +175,7 @@ const createSubject=async(req,res)=>{
 
 const updateSubject=async(req,res)=>{
     try{
-        const subject=await Subject.findByIdAndUpdate(req.params.id,{$set:req.body},{new:true,runValidators:true});
+        const subject=await Subject.findByIdAndUpdate(req.params.id,{$set:pickFields(req.body,SUBJECT_FIELDS)},{new:true,runValidators:true});
         if(!subject){
             return res.status(404).json({error:"Subject not found"});
         }
@@ -261,6 +264,17 @@ const createLesson=async(req,res)=>{
     try{
         requireFields(req.body,['name','subjectId','classId','teacherId','day','startTime','endTime']);
 
+        try{
+            await assertClassAccess(req.result,req.body.classId);
+        }
+        catch(accessErr){
+            return res.status(403).json({error:accessErr.message});
+        }
+
+        // Creating a lesson grants the named teacher access to the class through
+        // their profile, so only an admin may put someone else on the timetable.
+        const teacherId=req.result.role==='admin'?req.body.teacherId:req.result._id;
+
         const clash=await Lesson.findOne({
             classId:req.body.classId,
             day:req.body.day,
@@ -272,7 +286,16 @@ const createLesson=async(req,res)=>{
             throw new Error(`That slot clashes with "${clash.name}" on ${clash.day}`);
         }
 
-        const lesson=await Lesson.create(req.body);
+        const lesson=await Lesson.create({
+            name:req.body.name,
+            subjectId:req.body.subjectId,
+            classId:req.body.classId,
+            teacherId,
+            day:req.body.day,
+            startTime:req.body.startTime,
+            endTime:req.body.endTime,
+            room:req.body.room || ''
+        });
         await TeacherProfile.findOneAndUpdate({userId:lesson.teacherId},{$addToSet:{classes:lesson.classId,subjects:lesson.subjectId}},{upsert:true});
 
         res.status(201).json({lesson,message:"Lesson created successfully"});

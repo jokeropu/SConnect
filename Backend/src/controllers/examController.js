@@ -47,7 +47,18 @@ const createExam=async(req,res)=>{
             throw new Error("endTime must be after startTime");
         }
 
-        const exam=await Exam.create({...req.body,createdBy:req.result._id});
+        const exam=await Exam.create({
+            title:req.body.title,
+            subjectId:req.body.subjectId,
+            classId:req.body.classId,
+            term:req.body.term,
+            startTime:req.body.startTime,
+            endTime:req.body.endTime,
+            maxMarks:req.body.maxMarks,
+            passMarks:req.body.passMarks,
+            room:req.body.room || '',
+            createdBy:req.result._id
+        });
         const classroom=await Classroom.findById(exam.classId).select('name');
         const profiles=await StudentProfile.find({classId:exam.classId}).select('userId parentId');
 
