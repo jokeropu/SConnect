@@ -7,6 +7,7 @@ const {parsePaging,buildMeta}=require('../utils/pagination');
 const {childIdsForParent,classIdsForTeacher,classIdForStudent}=require('../utils/scope');
 const Lesson=require('../models/lesson');
 const StudentProfile=require('../models/studentProfile');
+const ParentProfile=require('../models/parentProfile');
 
 const canMessage=async(user,targetId)=>{
     if(user.role==='admin') return true;
@@ -172,27 +173,58 @@ const sendMessage=async(req,res)=>{
     }
 };
 
+// The same rules canMessage applies to one target, expressed as query clauses so
+// the whole contact list resolves in a handful of queries instead of a few per
+// candidate. Returns null when the role may contact nobody.
+const contactClausesFor=async(user)=>{
+    if(user.role==='teacher'){
+        const classIds=await classIdsForTeacher(user._id);
+        const profiles=await StudentProfile.find({classId:{$in:classIds}}).select('userId');
+        const studentIds=profiles.map((p)=>p.userId);
+        const parents=await ParentProfile.find({children:{$in:studentIds}}).select('userId');
+
+        return [
+            {role:{$in:['admin','teacher']}},
+            {role:'student',_id:{$in:studentIds}},
+            {role:'parent',_id:{$in:parents.map((p)=>p.userId)}}
+        ];
+    }
+
+    if(user.role==='student'){
+        const classId=await classIdForStudent(user._id);
+        const teacherIds=classId?await Lesson.find({classId}).distinct('teacherId'):[];
+        return [{role:'admin'},{role:'teacher',_id:{$in:teacherIds}}];
+    }
+
+    if(user.role==='parent'){
+        const children=await childIdsForParent(user._id);
+        const profiles=await StudentProfile.find({userId:{$in:children}}).select('classId');
+        const classIds=profiles.map((p)=>p.classId).filter(Boolean);
+        const teacherIds=await Lesson.find({classId:{$in:classIds}}).distinct('teacherId');
+        return [{role:'admin'},{role:'teacher',_id:{$in:teacherIds}}];
+    }
+
+    return null;
+};
+
 const contactList=async(req,res)=>{
     try{
-        let query={status:'approved',_id:{$ne:req.result._id}};
+        const query={status:'approved',_id:{$ne:req.result._id}};
 
-        if(req.result.role==='student' || req.result.role==='parent'){
-            query.role={$in:['teacher','admin']};
-        }
-        if(req.result.role==='teacher'){
-            query.role={$in:['admin','teacher','student','parent']};
-        }
-
-        const candidates=await User.find(query).select('firstName lastName role avatarUrl email').sort({firstName:1}).limit(300);
-        const permitted=[];
-
-        for(const candidate of candidates){
-            if(await canMessage(req.result,candidate._id)){
-                permitted.push(candidate);
+        if(req.result.role!=='admin'){
+            const clauses=await contactClausesFor(req.result);
+            if(!clauses){
+                return res.status(200).json({data:[]});
             }
+            query.$or=clauses;
         }
 
-        res.status(200).json({data:permitted});
+        const contacts=await User.find(query)
+            .select('firstName lastName role avatarUrl email')
+            .sort({firstName:1})
+            .limit(300);
+
+        res.status(200).json({data:contacts});
     }
     catch(err){
         res.status(500).json({error:err.message});
