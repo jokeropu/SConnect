@@ -1,14 +1,64 @@
 const Attendance=require('../models/attendance');
 const StudentProfile=require('../models/studentProfile');
 const Classroom=require('../models/classroom');
+const Notification=require('../models/notification');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta}=require('../utils/pagination');
 const {visibleClassIds,assertClassAccess,childIdsForParent}=require('../utils/scope');
 const {attendancePercentage}=require('../utils/gradeUtility');
-const {LOW_ATTENDANCE_THRESHOLD}=require('../config/appConfig');
+const {LOW_ATTENDANCE_THRESHOLD,LOW_ATTENDANCE_MIN_RECORDS,LOW_ATTENDANCE_NOTICE_COOLDOWN_MS}=require('../config/appConfig');
 
 const todayString=(date=new Date())=>date.toISOString().slice(0,10);
+
+// Warns students whose overall attendance has dropped below the threshold.
+// Called after attendance is recorded, never from a read, and rate limited per
+// student so re-saving a sheet does not pile up duplicate warnings.
+const flagLowAttendance=async(studentIds)=>{
+    if(studentIds.length===0){
+        return;
+    }
+
+    const totals=await Attendance.aggregate([
+        {$match:{'records.studentId':{$in:studentIds}}},
+        {$unwind:'$records'},
+        {$match:{'records.studentId':{$in:studentIds}}},
+        {$group:{
+            _id:'$records.studentId',
+            total:{$sum:1},
+            present:{$sum:{$cond:[{$in:['$records.status',['present','late']]},1,0]}}
+        }}
+    ]);
+
+    const atRisk=totals
+        .map((row)=>({studentId:row._id,total:row.total,percentage:attendancePercentage(row.present,row.total)}))
+        .filter((row)=>row.total>=LOW_ATTENDANCE_MIN_RECORDS && row.percentage<LOW_ATTENDANCE_THRESHOLD);
+
+    if(atRisk.length===0){
+        return;
+    }
+
+    const warnedRecently=await Notification.find({
+        userId:{$in:atRisk.map((row)=>row.studentId)},
+        type:'attendance_low',
+        createdAt:{$gte:new Date(Date.now()-LOW_ATTENDANCE_NOTICE_COOLDOWN_MS)}
+    }).distinct('userId');
+
+    const skip=new Set(warnedRecently.map(String));
+
+    for(const row of atRisk){
+        if(skip.has(String(row.studentId))){
+            continue;
+        }
+        await notify(
+            row.studentId,
+            'attendance_low',
+            'Attendance is below the required level',
+            `Your attendance is ${row.percentage}%. The minimum is ${LOW_ATTENDANCE_THRESHOLD}%.`,
+            '/attendance'
+        );
+    }
+};
 
 const markAttendance=async(req,res)=>{
     try{
@@ -21,6 +71,13 @@ const markAttendance=async(req,res)=>{
             throw new Error("No attendance records provided");
         }
 
+        // Correcting and re-saving a sheet must not re-announce students who were
+        // already marked absent on it, so only the newly absent are notified.
+        const previous=await Attendance.findOne({classId,date,lessonId:lessonId || null}).select('records');
+        const alreadyAbsent=new Set(
+            (previous?.records || []).filter((r)=>r.status==='absent').map((r)=>String(r.studentId))
+        );
+
         const attendance=await Attendance.findOneAndUpdate(
             {classId,date,lessonId:lessonId || null},
             {$set:{records,takenBy:req.result._id}},
@@ -28,10 +85,12 @@ const markAttendance=async(req,res)=>{
         );
 
         const classroom=await Classroom.findById(classId).select('name');
-        const absentIds=records.filter((r)=>r.status==='absent').map((r)=>r.studentId);
+        const newlyAbsent=attendance.records
+            .filter((r)=>r.status==='absent' && !alreadyAbsent.has(String(r.studentId)))
+            .map((r)=>r.studentId);
 
-        if(absentIds.length>0){
-            const profiles=await StudentProfile.find({userId:{$in:absentIds}}).select('userId parentId');
+        if(newlyAbsent.length>0){
+            const profiles=await StudentProfile.find({userId:{$in:newlyAbsent}}).select('userId parentId');
             for(const profile of profiles){
                 await notify(profile.userId,'attendance_absent','Marked absent',`You were marked absent in ${classroom?.name || 'class'} on ${date}.`,'/attendance');
                 if(profile.parentId){
@@ -39,6 +98,8 @@ const markAttendance=async(req,res)=>{
                 }
             }
         }
+
+        await flagLowAttendance(attendance.records.map((r)=>r.studentId));
 
         res.status(201).json({attendance,message:"Attendance saved"});
     }
@@ -157,11 +218,17 @@ const studentAttendance=async(req,res)=>{
         const total=present+absent+late;
         const percentage=attendancePercentage(present+late,total);
 
-        if(total>=10 && percentage<LOW_ATTENDANCE_THRESHOLD){
-            await notify(studentId,'attendance_low','Attendance is below the required level',`Your attendance is ${percentage}%. The minimum is ${LOW_ATTENDANCE_THRESHOLD}%.`,'/attendance');
-        }
-
-        res.status(200).json({studentId,present,absent,late,total,percentage,timeline});
+        res.status(200).json({
+            studentId,
+            present,
+            absent,
+            late,
+            total,
+            percentage,
+            belowThreshold:total>=LOW_ATTENDANCE_MIN_RECORDS && percentage<LOW_ATTENDANCE_THRESHOLD,
+            threshold:LOW_ATTENDANCE_THRESHOLD,
+            timeline
+        });
     }
     catch(err){
         res.status(500).json({error:err.message});

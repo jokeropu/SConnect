@@ -11,6 +11,8 @@ module.exports={
     DAYS:['monday','tuesday','wednesday','thursday','friday','saturday'],
     ATTENDANCE_STATUS:['present','absent','late','excused'],
     LOW_ATTENDANCE_THRESHOLD:75,
+    LOW_ATTENDANCE_MIN_RECORDS:10,
+    LOW_ATTENDANCE_NOTICE_COOLDOWN_MS:7*24*60*60*1000,
     QUIZ_STATUS:['draft','published','closed'],
     QUIZ_QUESTION_TYPES:['single','multiple','text','integer'],
     QUIZ_ATTEMPT_STATUS:['in-progress','submitted'],
