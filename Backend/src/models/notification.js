@@ -1,5 +1,6 @@
 const mongoose=require('mongoose');
 const {Schema}=mongoose;
+const {NOTIFICATION_TTL_SECONDS}=require('../config/appConfig');
 
 const NOTIFICATION_TYPES=[
     'account_approved',
@@ -52,6 +53,10 @@ const notificationSchema=new Schema({
 });
 
 notificationSchema.index({userId:1,createdAt:-1});
+
+// Notifications are transient nudges, so MongoDB expires them rather than
+// letting the collection grow for the life of the deployment.
+notificationSchema.index({createdAt:1},{expireAfterSeconds:NOTIFICATION_TTL_SECONDS});
 
 const Notification=mongoose.model("notification",notificationSchema);
 module.exports=Notification;
