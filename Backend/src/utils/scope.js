@@ -69,4 +69,15 @@ const canManageClassRecord=async(user,classId,ownerId)=>{
     return await isClassSupervisor(user._id,classId);
 };
 
-module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess,isClassSupervisor,canManageClassRecord};
+const teachesSubjectInClass=async(userId,classId,subjectId)=>{
+    if(!classId || !subjectId) return false;
+    return !!(await Lesson.exists({classId,subjectId,teacherId:userId}));
+};
+
+const canEnterMarks=async(user,classId,subjectId)=>{
+    if(user.role==='admin') return true;
+    if(await teachesSubjectInClass(user._id,classId,subjectId)) return true;
+    return await isClassSupervisor(user._id,classId);
+};
+
+module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess,isClassSupervisor,canManageClassRecord,teachesSubjectInClass,canEnterMarks};
