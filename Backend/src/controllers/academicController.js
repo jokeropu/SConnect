@@ -10,7 +10,7 @@ const {requireFields,pickFields}=require('../utils/validate');
 const CLASS_FIELDS=['name','gradeLevel','section','capacity','academicYear','supervisorId','subjects'];
 const SUBJECT_FIELDS=['name','code','description','teachers','classes'];
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,canManageClassRecord}=require('../utils/scope');
 
 const listClasses=async(req,res)=>{
     try{
@@ -309,8 +309,8 @@ const updateLesson=async(req,res)=>{
         if(!lesson){
             return res.status(404).json({error:"Lesson not found"});
         }
-        if(req.result.role!=='admin' && String(lesson.teacherId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the teacher who takes this lesson can edit it"});
+        if(!await canManageClassRecord(req.result,lesson.classId,lesson.teacherId)){
+            return res.status(403).json({error:"Only the teacher who takes this lesson, or the class head, can edit it"});
         }
 
         const allowed=['name','subjectId','day','startTime','endTime','room'];
@@ -343,8 +343,8 @@ const deleteLesson=async(req,res)=>{
         if(!lesson){
             return res.status(404).json({error:"Lesson not found"});
         }
-        if(req.result.role!=='admin' && String(lesson.teacherId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the teacher who takes this lesson can delete it"});
+        if(!await canManageClassRecord(req.result,lesson.classId,lesson.teacherId)){
+            return res.status(403).json({error:"Only the teacher who takes this lesson, or the class head, can delete it"});
         }
 
         await Lesson.findByIdAndDelete(lesson._id);

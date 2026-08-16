@@ -7,7 +7,7 @@ const {scoreBreakdown}=require('../utils/gradeUtility');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent,canManageClassRecord}=require('../utils/scope');
 const {QUIZ_GRACE_MS,QUIZ_RESULT_WEIGHT}=require('../config/appConfig');
 
 const recordQuizResult=async(quiz,attempt)=>{
@@ -49,7 +49,7 @@ const stripAnswers=(question)=>({
     options:question.options.map((option)=>({_id:option._id,text:option.text}))
 });
 
-const isOwner=(user,quiz)=>user.role==='admin' || String(quiz.createdBy)===String(user._id);
+const isOwner=(user,quiz)=>canManageClassRecord(user,quiz.classId,quiz.createdBy);
 
 const deadlineFor=(quiz,attempt)=>{
     const byTimer=new Date(attempt.startedAt).getTime()+quiz.timeLimit*60*1000;
@@ -272,7 +272,7 @@ const updateQuiz=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        if(!isOwner(req.result,quiz)){
+        if(!await isOwner(req.result,quiz)){
             return res.status(403).json({error:"Only the teacher who created this quiz can edit it"});
         }
 
@@ -314,7 +314,7 @@ const deleteQuiz=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        if(!isOwner(req.result,quiz)){
+        if(!await isOwner(req.result,quiz)){
             return res.status(403).json({error:"Only the teacher who created this quiz can delete it"});
         }
 
@@ -337,7 +337,7 @@ const setQuizStatus=async(req,res)=>{
         if(!quiz){
             return res.status(404).json({error:"Quiz not found"});
         }
-        if(!isOwner(req.result,quiz)){
+        if(!await isOwner(req.result,quiz)){
             return res.status(403).json({error:"Only the teacher who created this quiz can change its status"});
         }
 
