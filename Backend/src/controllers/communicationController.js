@@ -4,7 +4,7 @@ const StudentProfile=require('../models/studentProfile');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,canManageClassRecord}=require('../utils/scope');
 
 const listAnnouncements=async(req,res)=>{
     try{
@@ -79,8 +79,8 @@ const updateAnnouncement=async(req,res)=>{
         if(!announcement){
             return res.status(404).json({error:"Announcement not found"});
         }
-        if(req.result.role!=='admin' && String(announcement.authorId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the author can edit this announcement"});
+        if(!await canManageClassRecord(req.result,announcement.classId,announcement.authorId)){
+            return res.status(403).json({error:"Only the author, or the class head, can edit this announcement"});
         }
 
         const allowed=['title','body','pinned','urgent'];
@@ -102,8 +102,8 @@ const deleteAnnouncement=async(req,res)=>{
         if(!announcement){
             return res.status(404).json({error:"Announcement not found"});
         }
-        if(req.result.role!=='admin' && String(announcement.authorId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the author can delete this announcement"});
+        if(!await canManageClassRecord(req.result,announcement.classId,announcement.authorId)){
+            return res.status(403).json({error:"Only the author, or the class head, can delete this announcement"});
         }
 
         await Announcement.findByIdAndDelete(req.params.id);
@@ -177,8 +177,8 @@ const updateEvent=async(req,res)=>{
         if(!event){
             return res.status(404).json({error:"Event not found"});
         }
-        if(req.result.role!=='admin' && String(event.createdBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the person who created this event can edit it"});
+        if(!await canManageClassRecord(req.result,event.classId,event.createdBy)){
+            return res.status(403).json({error:"Only the person who created this event, or the class head, can edit it"});
         }
 
         const allowed=['title','description','category','startTime','endTime'];
@@ -204,8 +204,8 @@ const deleteEvent=async(req,res)=>{
         if(!event){
             return res.status(404).json({error:"Event not found"});
         }
-        if(req.result.role!=='admin' && String(event.createdBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the person who created this event can delete it"});
+        if(!await canManageClassRecord(req.result,event.classId,event.createdBy)){
+            return res.status(403).json({error:"Only the person who created this event, or the class head, can delete it"});
         }
 
         await Event.findByIdAndDelete(event._id);

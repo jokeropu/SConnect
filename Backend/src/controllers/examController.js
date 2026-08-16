@@ -5,7 +5,7 @@ const Classroom=require('../models/classroom');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds,canManageClassRecord}=require('../utils/scope');
 const {scoreBreakdown,buildReportCard}=require('../utils/gradeUtility');
 
 const listExams=async(req,res)=>{
@@ -83,8 +83,8 @@ const updateExam=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the teacher who created this exam can edit it"});
+        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
+            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can edit it"});
         }
 
         const allowed=['title','subjectId','term','startTime','endTime','maxMarks','passMarks','room'];
@@ -110,8 +110,8 @@ const deleteExam=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the teacher who created this exam can delete it"});
+        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
+            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can delete it"});
         }
 
         await Exam.findByIdAndDelete(exam._id);
@@ -131,7 +131,9 @@ const enterResults=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        await assertClassAccess(req.result,exam.classId);
+        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
+            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can enter its marks"});
+        }
 
         if(!Array.isArray(entries) || entries.length===0){
             throw new Error("No result entries provided");
@@ -173,8 +175,8 @@ const publishResults=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(req.result.role!=='admin' && String(exam.createdBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the teacher who created this exam can publish its results"});
+        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
+            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can publish its results"});
         }
         if(exam.resultsPublished){
             return res.status(400).json({error:"Results are already published"});

@@ -2,7 +2,7 @@ const Material=require('../models/material');
 const cloudinary=require('../config/cloudinary');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds}=require('../utils/scope');
+const {visibleClassIds,canManageClassRecord}=require('../utils/scope');
 
 const listMaterials=async(req,res)=>{
     try{
@@ -64,8 +64,8 @@ const deleteMaterial=async(req,res)=>{
         if(!material){
             return res.status(404).json({error:"Material not found"});
         }
-        if(req.result.role!=='admin' && String(material.uploadedBy)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the uploader can delete this material"});
+        if(!await canManageClassRecord(req.result,material.classId,material.uploadedBy)){
+            return res.status(403).json({error:"Only the uploader, or the class head, can delete this material"});
         }
 
         if(material.filePublicId){

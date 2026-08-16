@@ -6,7 +6,7 @@ const cloudinary=require('../config/cloudinary');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent,canManageClassRecord}=require('../utils/scope');
 const {scoreBreakdown}=require('../utils/gradeUtility');
 
 const listAssignments=async(req,res)=>{
@@ -121,8 +121,8 @@ const updateAssignment=async(req,res)=>{
         if(!assignment){
             return res.status(404).json({error:"Assignment not found"});
         }
-        if(req.result.role!=='admin' && String(assignment.teacherId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the assigning teacher can edit this"});
+        if(!await canManageClassRecord(req.result,assignment.classId,assignment.teacherId)){
+            return res.status(403).json({error:"Only the assigning teacher, or the class head, can edit this"});
         }
 
         const allowed=['title','description','dueDate','startDate','maxMarks','subjectId'];
@@ -151,8 +151,8 @@ const deleteAssignment=async(req,res)=>{
         if(!assignment){
             return res.status(404).json({error:"Assignment not found"});
         }
-        if(req.result.role!=='admin' && String(assignment.teacherId)!==String(req.result._id)){
-            return res.status(403).json({error:"Only the assigning teacher can delete this"});
+        if(!await canManageClassRecord(req.result,assignment.classId,assignment.teacherId)){
+            return res.status(403).json({error:"Only the assigning teacher, or the class head, can delete this"});
         }
 
         await Assignment.findByIdAndDelete(req.params.id);
@@ -214,7 +214,15 @@ const gradeSubmission=async(req,res)=>{
             return res.status(404).json({error:"Submission not found"});
         }
 
-        const maxMarks=submission.assignmentId?.maxMarks || 100;
+        const assignment=submission.assignmentId;
+        if(!assignment){
+            return res.status(404).json({error:"The assignment for this submission no longer exists"});
+        }
+        if(!await canManageClassRecord(req.result,assignment.classId,assignment.teacherId)){
+            return res.status(403).json({error:"Only the assigning teacher, or the class head, can mark this"});
+        }
+
+        const maxMarks=assignment.maxMarks || 100;
         if(marksObtained===undefined || marksObtained<0 || marksObtained>maxMarks){
             throw new Error(`Marks must be between 0 and ${maxMarks}`);
         }

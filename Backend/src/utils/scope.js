@@ -1,6 +1,7 @@
 const StudentProfile=require('../models/studentProfile');
 const ParentProfile=require('../models/parentProfile');
 const TeacherProfile=require('../models/teacherProfile');
+const Classroom=require('../models/classroom');
 const Lesson=require('../models/lesson');
 
 const classIdsForTeacher=async(teacherId)=>{
@@ -56,4 +57,16 @@ const assertClassAccess=async(user,classId)=>{
     return true;
 };
 
-module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess};
+const isClassSupervisor=async(userId,classId)=>{
+    if(!classId) return false;
+    const classroom=await Classroom.findById(classId).select('supervisorId');
+    return !!classroom?.supervisorId && String(classroom.supervisorId)===String(userId);
+};
+
+const canManageClassRecord=async(user,classId,ownerId)=>{
+    if(user.role==='admin') return true;
+    if(ownerId && String(ownerId)===String(user._id)) return true;
+    return await isClassSupervisor(user._id,classId);
+};
+
+module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess,isClassSupervisor,canManageClassRecord};
