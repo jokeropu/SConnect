@@ -5,7 +5,7 @@ const Classroom=require('../models/classroom');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds,canManageClassRecord}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds,canManageClassRecord,canEnterMarks}=require('../utils/scope');
 const {scoreBreakdown,buildReportCard}=require('../utils/gradeUtility');
 
 const listExams=async(req,res)=>{
@@ -131,8 +131,8 @@ const enterResults=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
-            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can enter its marks"});
+        if(!await canEnterMarks(req.result,exam.classId,exam.subjectId)){
+            return res.status(403).json({error:"Only the teacher who takes this subject in this section, or the class head, can enter its marks"});
         }
 
         if(!Array.isArray(entries) || entries.length===0){
@@ -175,8 +175,10 @@ const publishResults=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(!await canManageClassRecord(req.result,exam.classId,exam.createdBy)){
-            return res.status(403).json({error:"Only the teacher who created this exam, or the class head, can publish its results"});
+        const mayPublish=await canManageClassRecord(req.result,exam.classId,exam.createdBy)
+            || await canEnterMarks(req.result,exam.classId,exam.subjectId);
+        if(!mayPublish){
+            return res.status(403).json({error:"Only the teacher who set or marked this exam, or the class head, can publish its results"});
         }
         if(exam.resultsPublished){
             return res.status(400).json({error:"Results are already published"});
