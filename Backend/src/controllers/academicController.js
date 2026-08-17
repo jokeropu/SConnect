@@ -273,15 +273,20 @@ const createLesson=async(req,res)=>{
 
         const teacherId=req.result.role==='admin'?req.body.teacherId:req.result._id;
 
-        const clash=await Lesson.findOne({
-            classId:req.body.classId,
+        const overlap={
             day:req.body.day,
             startTime:{$lt:req.body.endTime},
             endTime:{$gt:req.body.startTime}
-        });
+        };
 
+        const clash=await Lesson.findOne({...overlap,classId:req.body.classId});
         if(clash){
             throw new Error(`That slot clashes with "${clash.name}" on ${clash.day}`);
+        }
+
+        const teacherClash=await Lesson.findOne({...overlap,teacherId}).populate('classId','name');
+        if(teacherClash){
+            throw new Error(`That teacher already takes "${teacherClash.name}" in ${teacherClash.classId?.name || 'another class'} at that time`);
         }
 
         const lesson=await Lesson.create({
@@ -318,15 +323,21 @@ const updateLesson=async(req,res)=>{
             if(req.body[key]!==undefined) lesson[key]=req.body[key];
         }
 
-        const clash=await Lesson.findOne({
+        const overlap={
             _id:{$ne:lesson._id},
-            classId:lesson.classId,
             day:lesson.day,
             startTime:{$lt:lesson.endTime},
             endTime:{$gt:lesson.startTime}
-        });
+        };
+
+        const clash=await Lesson.findOne({...overlap,classId:lesson.classId});
         if(clash){
             throw new Error(`That slot clashes with "${clash.name}" on ${clash.day}`);
+        }
+
+        const teacherClash=await Lesson.findOne({...overlap,teacherId:lesson.teacherId}).populate('classId','name');
+        if(teacherClash){
+            throw new Error(`That teacher already takes "${teacherClash.name}" in ${teacherClash.classId?.name || 'another class'} at that time`);
         }
 
         await lesson.save();
