@@ -140,8 +140,6 @@ quizSchema.pre('save',function(next){
     next();
 });
 
-// insertMany skips save hooks, which would leave totalMarks at zero and make
-// every score look like it beat the paper
 quizSchema.pre('insertMany',function(next,docs){
     for(const doc of docs || []){
         doc.totalMarks=sumMarks(doc.questions);

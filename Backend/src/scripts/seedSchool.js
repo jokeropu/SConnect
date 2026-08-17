@@ -37,11 +37,9 @@ const SUBJECTS = [
     { name: 'Geography', code: 'GEO' }
 ];
 
-// periods per week, per section
 const JUNIOR_PLAN = { MATH: 6, ENG: 5, SCI: 5, VE: 3, GK: 3, PE: 3 };
 const SENIOR_PLAN = { MATH: 6, ENG: 5, PHY: 4, CHEM: 4, BIO: 4, COMP: 3, HIST: 3, GEO: 3, PE: 3 };
 
-// staffing: grade-owned subjects get one teacher per grade, the rest span grades
 const JUNIOR_STAFF = [
     { code: 'MATH', count: 4, ownsGrade: true },
     { code: 'ENG', count: 4, ownsGrade: true },
@@ -126,14 +124,12 @@ const run = async () => {
     }
     (await User.find({}).select('email')).forEach((u) => usedEmails.add(u.email));
 
-    // ---------- subjects ----------
     const subjects = {};
     for (const entry of SUBJECTS) {
         subjects[entry.code] = await Subject.create(entry);
     }
     console.log(`subjects        ${Object.keys(subjects).length}`);
 
-    // ---------- classrooms ----------
     const classes = {};
     for (let grade = 1; grade <= 10; grade++) {
         for (const section of SECTIONS) {
@@ -150,7 +146,6 @@ const run = async () => {
     }
     console.log(`classrooms      ${Object.keys(classes).length}`);
 
-    // ---------- leadership ----------
     const makeUser = async (person, role, suffix, extra = {}) => User.create({
         firstName: person.firstName,
         lastName: person.lastName,
@@ -172,8 +167,6 @@ const run = async () => {
     }
     console.log(`admins          ${admins.length}`);
 
-    // ---------- teachers ----------
-    // sectionTeacher[className][subjectCode] = teacher
     const sectionTeacher = {};
     Object.keys(classes).forEach((name) => { sectionTeacher[name] = {}; });
     const teachers = [];
@@ -207,7 +200,6 @@ const run = async () => {
                     }
                 });
             } else {
-                // spread across grades so every grade sees at least two of them
                 let i = 0;
                 for (const grade of grades) {
                     for (const section of SECTIONS) {
@@ -223,7 +215,6 @@ const run = async () => {
     await buildTier(SENIOR_STAFF, [5, 6, 7, 8, 9, 10]);
     console.log(`teachers        ${teachers.length}`);
 
-    // ---------- class heads: the grade's Maths teacher supervises its 3 sections ----------
     const classHeads = [];
     for (let grade = 1; grade <= 10; grade++) {
         const head = sectionTeacher[`${grade}-A`].MATH;
@@ -244,7 +235,6 @@ const run = async () => {
         });
     }
 
-    // ---------- timetable ----------
     const schedule = buildTimetable(classes, sectionTeacher, subjects);
     const lessonDocs = schedule.map((slot) => ({
         name: `${slot.subjectName} — ${slot.className}`,
@@ -259,7 +249,6 @@ const run = async () => {
     await Lesson.insertMany(lessonDocs);
     console.log(`lessons         ${lessonDocs.length}`);
 
-    // ---------- students ----------
     const mine = await User.findOne({ email: MY_EMAIL });
     const students = [];
 
@@ -283,7 +272,6 @@ const run = async () => {
     }
     console.log(`students        ${students.length}`);
 
-    // ---------- siblings, then parents ----------
     const siblingPairs = [];
     const paired = new Set();
     const shuffled = shuffle(students.map((_, i) => i));
@@ -321,7 +309,6 @@ const run = async () => {
     }
     console.log(`parents         ${parentCount}  (${siblingPairs.length} with two children)`);
 
-    // ---------- student profiles, roll numbers alphabetical within a section ----------
     const bySection = {};
     for (const entry of students) {
         (bySection[entry.className] = bySection[entry.className] || []).push(entry);
@@ -358,16 +345,6 @@ const run = async () => {
     await mongoose.connection.close();
 };
 
-// Every section must be taught in every one of its periods, and a teacher can
-// only be in one room at a time. With a grade owned by one teacher per subject,
-// supply equals demand exactly, so a greedy fill always strands something.
-// Each period is instead a bipartite matching between sections and free
-// teachers, solved with augmenting paths, which König's theorem guarantees.
-// Each lesson is an edge between a section and a teacher; a timetable is a
-// proper edge colouring where the colours are the week's periods. König's
-// theorem says a bipartite graph needs only as many colours as its busiest
-// vertex, and this is the construction: give the edge a colour free at both
-// ends, or swap an alternating chain of two colours until one is.
 function colourLessons(edges, colours) {
     const atSection = new Map();
     const atTeacher = new Map();
@@ -396,10 +373,6 @@ function colourLessons(edges, colours) {
             continue;
         }
 
-        // a is taken at the teacher and b at the section. The teacher has an
-        // a-edge but no b-edge, so it sits at the end of an a/b alternating
-        // chain; swapping the chain frees a there without disturbing a at the
-        // section, which is where this edge then goes.
         const chain = [];
         let node = edges[e].teacher;
         let onSection = false;
@@ -416,8 +389,6 @@ function colourLessons(edges, colours) {
         }
         if (chain.length > colours * 2) return null;
 
-        // clear the whole chain before rewriting it: chain edges share vertices,
-        // so flipping one at a time lets a later edge wipe an earlier one
         for (const idx of chain) {
             const was = colourOf[idx];
             rowFor(atSection, edges[idx].section)[was] = null;
@@ -470,8 +441,6 @@ function scheduleTier(names, sectionTeacher, plan, periodsPerDay, subjects) {
     return { placed, attempt: 1 };
 }
 
-// A colouring bug would produce a timetable that looks fine per section and is
-// impossible to teach, so the result is checked rather than trusted.
 function assertTimetableValid(placed, classes) {
     const teacherAt = new Set();
     const sectionAt = new Set();
@@ -505,7 +474,6 @@ function buildTimetable(classes, sectionTeacher, subjects) {
     const junior = Object.keys(classes).filter((n) => classes[n].gradeLevel <= 4);
     const senior = Object.keys(classes).filter((n) => classes[n].gradeLevel > 4);
 
-    // the two tiers share no teachers, so they schedule independently
     const j = scheduleTier(junior, sectionTeacher, JUNIOR_PLAN, JUNIOR_PERIODS, subjects);
     if (!j) throw new Error('Could not build a clash-free junior timetable');
     const s = scheduleTier(senior, sectionTeacher, SENIOR_PLAN, SENIOR_PERIODS, subjects);

@@ -1,5 +1,3 @@
-// Paper setting and paper marking come apart: the setter owns the paper, the
-// section's own subject teacher enters the marks.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -28,7 +26,7 @@ const token=(u)=>jwt.sign({_id:u._id,role:u.role},process.env.JWT_ACCESS_KEY,{ex
 const hit=async(method,path,user,body)=>{
     const res=await fetch(BASE+path,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(user)},body:body?JSON.stringify(body):undefined});
     let json=null;
-    try{ json=await res.json(); }catch{ /* none */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -46,14 +44,11 @@ const hit=async(method,path,user,body)=>{
         made.physTeacher=await User.create({firstName:'Physone',lastName:'K',email:tag+'p@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
         made.student=await User.create({firstName:'Pupil',lastName:'K',email:tag+'s@x.io',password:'x'.repeat(12),role:'student',status:'approved'});
 
-        // one grade, two sections; head supervises both
         made.secA=await Classroom.create({name:tag+'-9A',gradeLevel:9,section:'A',capacity:30,academicYear:'2026-27',supervisorId:made.head._id});
         made.secB=await Classroom.create({name:tag+'-9B',gradeLevel:9,section:'B',capacity:30,academicYear:'2026-27',supervisorId:made.head._id});
 
-        // setter teaches Maths in B only; marker teaches Maths in A only
         made.lesSetter=await Lesson.create({name:tag+' m-b',subjectId:made.maths._id,classId:made.secB._id,teacherId:made.setter._id,day:'monday',startTime:'09:00',endTime:'09:45'});
         made.lesMarker=await Lesson.create({name:tag+' m-a',subjectId:made.maths._id,classId:made.secA._id,teacherId:made.marker._id,day:'monday',startTime:'09:00',endTime:'09:45'});
-        // a Physics teacher who also teaches section A, but a different subject
         made.lesPhys=await Lesson.create({name:tag+' p-a',subjectId:made.physics._id,classId:made.secA._id,teacherId:made.physTeacher._id,day:'tuesday',startTime:'09:00',endTime:'09:45'});
 
         made.tpSetter=await TeacherProfile.create({userId:made.setter._id,classes:[made.secB._id]});
@@ -62,28 +57,23 @@ const hit=async(method,path,user,body)=>{
         made.tpHead=await TeacherProfile.create({userId:made.head._id,classes:[made.secA._id,made.secB._id]});
         made.sp=await StudentProfile.create({userId:made.student._id,classId:made.secA._id});
 
-        // The setter writes section A's paper even though they don't teach A.
         made.exam=await Exam.create({title:tag+' Mid Term Maths 9-A',subjectId:made.maths._id,classId:made.secA._id,
             createdBy:made.setter._id,maxMarks:80,startTime:new Date(Date.now()+3600000),endTime:new Date(Date.now()+7200000)});
         const eid=String(made.exam._id);
         const entry={entries:[{studentId:String(made.student._id),marksObtained:64}]};
 
-        // ---- setting the paper ----
         check('setter CAN edit their own paper',(await hit('PUT','/exams/'+eid,made.setter,{room:'Hall 1'})).code,200);
         check('class head CAN edit the paper',(await hit('PUT','/exams/'+eid,made.head,{room:'Hall 2'})).code,200);
         check('section maths teacher CANNOT edit the paper',(await hit('PUT','/exams/'+eid,made.marker,{room:'nope'})).code,403);
 
-        // ---- marking the paper ----
         check('section maths teacher CAN enter marks',(await hit('POST','/exams/'+eid+'/results',made.marker,entry)).code,201);
         check('the mark landed',(await Result.findOne({examId:made.exam._id})).marksObtained,64);
         check('setter CANNOT mark a section they do not teach',(await hit('POST','/exams/'+eid+'/results',made.setter,entry)).code,403);
         check('a different subject teacher of the same section CANNOT mark',(await hit('POST','/exams/'+eid+'/results',made.physTeacher,entry)).code,403);
         check('class head CAN mark as fallback',(await hit('POST','/exams/'+eid+'/results',made.head,entry)).code,201);
 
-        // ---- publishing ----
         check('section maths teacher CAN publish what they marked',(await hit('POST','/exams/'+eid+'/publish',made.marker)).code,200);
 
-        // ---- the setter marking their OWN section works ----
         made.examB=await Exam.create({title:tag+' Mid Term Maths 9-B',subjectId:made.maths._id,classId:made.secB._id,
             createdBy:made.setter._id,maxMarks:80,startTime:new Date(Date.now()+3600000),endTime:new Date(Date.now()+7200000)});
         made.studentB=await User.create({firstName:'Pupilb',lastName:'K',email:tag+'sb@x.io',password:'x'.repeat(12),role:'student',status:'approved'});

@@ -1,4 +1,3 @@
-// Mass-assignment / privilege-escalation checks over the real HTTP stack.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -30,7 +29,7 @@ const hit=async(method,path,user,body)=>{
         body:body?JSON.stringify(body):undefined
     });
     let json=null;
-    try{ json=await res.json(); }catch{ /* no body */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -59,35 +58,29 @@ const classesOf=async(userId)=>{
         const lesson=(over={})=>({name:tag+' lesson',subjectId:String(made.subject._id),classId:String(made.klass._id),
             teacherId:String(made.insider._id),day:'tuesday',startTime:'11:00',endTime:'12:00',...over});
 
-        // ---------- privilege escalation via createLesson ----------
         const esc=await hit('POST','/lessons',made.attacker,lesson({teacherId:String(made.attacker._id)}));
         check('teacher without class access CANNOT create lesson there',esc.code,403);
         check('attacker gained NO class access',await classesOf(made.attacker._id),[]);
 
-        // ---------- teacher cannot put another teacher on the timetable ----------
         const hijack=await hit('POST','/lessons',made.insider,lesson({teacherId:String(made.victim._id),startTime:'13:00',endTime:'14:00'}));
         check('insider can create a lesson in their own class',hijack.code,201);
         check('teacherId forced to the creator',String(hijack.json.lesson.teacherId),String(made.insider._id));
         check('victim was NOT granted class access',await classesOf(made.victim._id),[]);
 
-        // ---------- admin may still assign another teacher ----------
         const assigned=await hit('POST','/lessons',made.admin,lesson({teacherId:String(made.victim._id),startTime:'15:00',endTime:'16:00'}));
         check('admin CAN assign another teacher',assigned.code,201);
         check('admin assignment keeps requested teacher',String(assigned.json.lesson.teacherId),String(made.victim._id));
         check('admin assignment grants that teacher the class',await classesOf(made.victim._id),[String(made.klass._id)]);
 
-        // ---------- normal teacher workflow still works ----------
         const normal=await hit('POST','/lessons',made.insider,lesson({startTime:'08:00',endTime:'09:00'}));
         check('assigned teacher can still add their own lesson',normal.code,201);
 
-        // ---------- exam: resultsPublished must not be injectable ----------
         const exam=await hit('POST','/exams',made.insider,{title:tag+' exam',subjectId:String(made.subject._id),
             classId:String(made.klass._id),maxMarks:50,resultsPublished:true,
             startTime:new Date(Date.now()+3600000),endTime:new Date(Date.now()+7200000)});
         check('exam created',exam.code,201);
         check('resultsPublished NOT injectable at creation',(await Exam.findById(exam.json.exam._id)).resultsPublished,false);
 
-        // ---------- admin class/subject flows must not regress ----------
         const newClass=await hit('POST','/classes',made.admin,{name:tag+'-c2',gradeLevel:10,section:'B',capacity:25,
             academicYear:'2026-27',supervisorId:String(made.insider._id),subjects:[String(made.subject._id)]});
         check('admin can still create a class with all fields',newClass.code,201);

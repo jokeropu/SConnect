@@ -1,4 +1,3 @@
-// Quiz -> Result wiring: weighting maths, report-card inclusion, cleanup.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -31,7 +30,7 @@ const token=(u)=>jwt.sign({_id:u._id,role:u.role},process.env.JWT_ACCESS_KEY,{ex
 const hit=async(method,path,user,body)=>{
     const res=await fetch(BASE+path,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(user)},body:body?JSON.stringify(body):undefined});
     let json=null;
-    try{ json=await res.json(); }catch{ /* none */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -40,25 +39,19 @@ const hit=async(method,path,user,body)=>{
     const tag='zzqr-'+Date.now();
 
     try{
-        // ---- pure maths first, no database involved ----
         check('weight config is 0.1',QUIZ_RESULT_WEIGHT,0.1);
 
         const exam={marksObtained:80,maxMarks:100,points:9,weight:1};
         const quiz={marksObtained:2,maxMarks:20,points:0,weight:0.1};
         const weightedCard=buildReportCard([exam,quiz]);
-        // (80*1 + 2*0.1) / (100*1 + 20*0.1) = 80.2 / 102 = 78.63%
         check('weighted percentage dilutes a bad quiz',weightedCard.percentage,78.63);
-        // unweighted would have been 82/120 = 68.33%
         check('unweighted maths would have been much worse',Math.round((82/120)*10000)/100,68.33);
-        // gpa = (9*1 + 0*0.1) / 1.1 = 8.18, vs a flat average of 4.5
         check('weighted gpa barely moves',weightedCard.gpa,8.18);
         check('raw marks kept unweighted for display',[weightedCard.totalObtained,weightedCard.totalMax],[82,120]);
 
-        // rows written before weight existed must behave exactly as before
         const legacy=buildReportCard([{marksObtained:80,maxMarks:100,points:9},{marksObtained:60,maxMarks:100,points:7}]);
         check('legacy rows without weight still average normally',[legacy.percentage,legacy.gpa],[70,8]);
 
-        // ---- now end to end ----
         made.subject=await Subject.create({name:tag+'-sub',code:(tag+'S').slice(0,12)});
         made.klass=await Classroom.create({name:tag+'-class',gradeLevel:9,capacity:30,academicYear:'2026-27'});
         made.teacher=await User.create({firstName:'Teach',lastName:'Qr',email:tag+'t@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
@@ -80,7 +73,6 @@ const hit=async(method,path,user,body)=>{
 
         const start=await hit('POST','/quizzes/'+made.quiz._id+'/start',made.student);
         const qs=start.json.quiz.questions;
-        // answer q1 right, q2 wrong -> 5 / 10
         await hit('POST','/quizzes/'+made.quiz._id+'/submit',made.student,{responses:{
             [qs[0]._id]:[String(qs[0].options[0]._id)],
             [qs[1]._id]:[String(qs[1].options[1]._id)]
@@ -93,7 +85,6 @@ const hit=async(method,path,user,body)=>{
         check('Result attributed to the quiz author',String(result.enteredBy),String(made.teacher._id));
         check('Result linked to the quiz, not an exam',[!!result.quizId,result.examId],[true,null]);
 
-        // report card must now include it, and group it under the quiz's subject
         const card=await hit('GET','/results/report-card',made.student);
         check('report card reachable',card.code,200);
         check('report card flags weighting',card.json.weighted,true);
@@ -101,13 +92,11 @@ const hit=async(method,path,user,body)=>{
         check('quiz grouped under its own subject, not Other',!!sub,true);
         check('subject shows the raw quiz marks',[sub?.obtained,sub?.max],[5,10]);
 
-        // results list should name the quiz rather than fall back to "Assignment"
         const list=await hit('GET','/results',made.student);
         const row=list.json.data.find((r)=>String(r.quizId?._id)===String(made.quiz._id));
         check('quiz appears in the results list',!!row,true);
         check('list populates the quiz title',row?.quizId?.title,tag+' quiz');
 
-        // a negative score must not violate the Result min:0 constraint
         made.quiz2=await Quiz.create({title:tag+' neg',subjectId:made.subject._id,classId:made.klass._id,
             createdBy:made.teacher._id,status:'published',timeLimit:10,negativeMarking:true,...window,
             questions:[{text:'n',type:'single',marks:1,negativeMarks:5,options:[{text:'a',isCorrect:true},{text:'b'}]}]});
@@ -118,12 +107,10 @@ const hit=async(method,path,user,body)=>{
         const negResult=await Result.findOne({quizId:made.quiz2._id,studentId:made.student._id});
         check('negative score floored to 0 in Result',negResult?.marksObtained,0);
 
-        // deleting a quiz must not leave orphan results
         await hit('DELETE','/quizzes/'+made.quiz2._id,made.teacher);
         check('deleting a quiz removes its Result',await Result.countDocuments({quizId:made.quiz2._id}),0);
         made.quiz2=null;
 
-        // exam results must be unaffected by all of this
         const examRes=await hit('POST','/exams',made.teacher,{title:tag+' exam',subjectId:String(made.subject._id),
             classId:String(made.klass._id),maxMarks:100,...window});
         made.exam=examRes.json.exam;
