@@ -133,8 +133,19 @@ const quizSchema=new Schema({
 quizSchema.index({classId:1,startTime:-1});
 quizSchema.index({subjectId:1});
 
+const sumMarks=(questions)=>(questions || []).reduce((sum,q)=>sum+(q.marks ?? 1),0);
+
 quizSchema.pre('save',function(next){
-    this.totalMarks=this.questions.reduce((sum,q)=>sum+q.marks,0);
+    this.totalMarks=sumMarks(this.questions);
+    next();
+});
+
+// insertMany skips save hooks, which would leave totalMarks at zero and make
+// every score look like it beat the paper
+quizSchema.pre('insertMany',function(next,docs){
+    for(const doc of docs || []){
+        doc.totalMarks=sumMarks(doc.questions);
+    }
     next();
 });
 
