@@ -28,6 +28,10 @@ const requireFields=(data,fields)=>{
     }
 };
 
+const rollNumberFor=(className,position)=>`${className}-${String(position).padStart(2,'0')}`;
+
+const rollPosition=(rollNumber)=>String(rollNumber || '').split('-').pop();
+
 const pickFields=(data,fields)=>{
     const picked={};
     for(const field of fields){
@@ -36,4 +40,4 @@ const pickFields=(data,fields)=>{
     return picked;
 };
 
-module.exports={validateRegistration,validateObjectId,requireFields,pickFields};
+module.exports={validateRegistration,validateObjectId,requireFields,pickFields,rollNumberFor,rollPosition};
