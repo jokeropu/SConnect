@@ -284,11 +284,16 @@ const forgotPassword=async(req,res)=>{
             const clientUrl=(process.env.CLIENT_URL || 'http://localhost:5174').split(',')[0].trim();
             const resetLink=`${clientUrl}/reset-password/${rawToken}`;
 
-            await sendEmail({
-                to:user.email,
-                subject:"Reset your SConnect password",
-                html:`<p>You requested a password reset. This link expires in 30 minutes.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you didn't request this, you can safely ignore this email.</p>`
-            });
+            try{
+                await sendEmail({
+                    to:user.email,
+                    subject:"Reset your SConnect password",
+                    html:`<p>You requested a password reset. This link expires in 30 minutes.</p><p><a href="${resetLink}">${resetLink}</a></p><p>If you didn't request this, you can safely ignore this email.</p>`
+                });
+            }
+            catch(mailErr){
+                console.error(`Password reset email failed for ${user.email}: ${mailErr.message}`);
+            }
         }
 
         res.status(200).json({message:"If that email is registered, a reset link has been sent."});
