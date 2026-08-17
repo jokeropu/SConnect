@@ -5,7 +5,7 @@ const Classroom=require('../models/classroom');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds,canManageClassRecord,canEnterMarks}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,childIdsForParent,visibleStudentIds,canManageClassRecord,canActAsSubjectTeacher}=require('../utils/scope');
 const {scoreBreakdown,buildReportCard}=require('../utils/gradeUtility');
 
 const listExams=async(req,res)=>{
@@ -131,7 +131,7 @@ const enterResults=async(req,res)=>{
         if(!exam){
             return res.status(404).json({error:"Exam not found"});
         }
-        if(!await canEnterMarks(req.result,exam.classId,exam.subjectId)){
+        if(!await canActAsSubjectTeacher(req.result,exam.classId,exam.subjectId)){
             return res.status(403).json({error:"Only the teacher who takes this subject in this section, or the class head, can enter its marks"});
         }
 
@@ -176,7 +176,7 @@ const publishResults=async(req,res)=>{
             return res.status(404).json({error:"Exam not found"});
         }
         const mayPublish=await canManageClassRecord(req.result,exam.classId,exam.createdBy)
-            || await canEnterMarks(req.result,exam.classId,exam.subjectId);
+            || await canActAsSubjectTeacher(req.result,exam.classId,exam.subjectId);
         if(!mayPublish){
             return res.status(403).json({error:"Only the teacher who set or marked this exam, or the class head, can publish its results"});
         }

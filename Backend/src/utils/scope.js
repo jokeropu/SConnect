@@ -74,10 +74,10 @@ const teachesSubjectInClass=async(userId,classId,subjectId)=>{
     return !!(await Lesson.exists({classId,subjectId,teacherId:userId}));
 };
 
-const canEnterMarks=async(user,classId,subjectId)=>{
+const canActAsSubjectTeacher=async(user,classId,subjectId)=>{
     if(user.role==='admin') return true;
     if(await teachesSubjectInClass(user._id,classId,subjectId)) return true;
     return await isClassSupervisor(user._id,classId);
 };
 
-module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess,isClassSupervisor,canManageClassRecord,teachesSubjectInClass,canEnterMarks};
+module.exports={classIdsForTeacher,classIdForStudent,childIdsForParent,classIdsForParent,visibleClassIds,visibleStudentIds,assertClassAccess,isClassSupervisor,canManageClassRecord,teachesSubjectInClass,canActAsSubjectTeacher};

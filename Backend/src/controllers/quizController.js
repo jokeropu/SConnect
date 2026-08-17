@@ -7,7 +7,7 @@ const {scoreBreakdown}=require('../utils/gradeUtility');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
 const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
-const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent,canManageClassRecord}=require('../utils/scope');
+const {visibleClassIds,assertClassAccess,classIdForStudent,childIdsForParent,canManageClassRecord,canActAsSubjectTeacher}=require('../utils/scope');
 const {QUIZ_GRACE_MS,QUIZ_RESULT_WEIGHT}=require('../config/appConfig');
 
 const recordQuizResult=async(quiz,attempt)=>{
@@ -186,7 +186,10 @@ const listQuizzes=async(req,res)=>{
 const createQuiz=async(req,res)=>{
     try{
         requireFields(req.body,['title','subjectId','classId','startTime','endTime','timeLimit','questions']);
-        await assertClassAccess(req.result,req.body.classId);
+
+        if(!await canActAsSubjectTeacher(req.result,req.body.classId,req.body.subjectId)){
+            return res.status(403).json({error:"Only the teacher who takes this subject in this section, or the class head, can set a quiz for it"});
+        }
 
         if(!Array.isArray(req.body.questions) || req.body.questions.length===0){
             throw new Error("A quiz needs at least one question");
