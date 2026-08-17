@@ -104,7 +104,13 @@ userSchema.pre('save',async function(next){
     try{
         const prefix=MEMBER_ID_PREFIX[this.role] || 'USR';
         const year=new Date().getFullYear();
-        const seq=await Counter.next(`member:${prefix}:${year}`);
+        const seq=await Counter.next(`member:${prefix}:${year}`,async()=>{
+            const highest=await mongoose.model('user')
+                .findOne({memberId:new RegExp(`^${prefix}-${year}-`)})
+                .sort({memberId:-1})
+                .select('memberId');
+            return highest?Number(String(highest.memberId).split('-').pop()):0;
+        });
         this.memberId=`${prefix}-${year}-${String(seq).padStart(4,'0')}`;
         next();
     }

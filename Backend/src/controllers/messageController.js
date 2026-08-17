@@ -3,7 +3,7 @@ const Message=require('../models/message');
 const User=require('../models/user');
 const notify=require('../utils/notify');
 const {requireFields}=require('../utils/validate');
-const {parsePaging,buildMeta}=require('../utils/pagination');
+const {parsePaging,buildMeta,searchRegex}=require('../utils/pagination');
 const {childIdsForParent,classIdsForTeacher,classIdForStudent}=require('../utils/scope');
 const Lesson=require('../models/lesson');
 const StudentProfile=require('../models/studentProfile');
@@ -211,17 +211,27 @@ const contactList=async(req,res)=>{
         if(req.result.role!=='admin'){
             const clauses=await contactClausesFor(req.result);
             if(!clauses){
-                return res.status(200).json({data:[]});
+                return res.status(200).json({data:[],total:0});
             }
-            query.$or=clauses;
+            query.$and=[{$or:clauses}];
         }
 
-        const contacts=await User.find(query)
-            .select('firstName lastName role avatarUrl email')
-            .sort({firstName:1})
-            .limit(300);
+        // In a full school the list runs to hundreds, so it is capped. Without a
+        // search the tail of the alphabet would simply be unreachable.
+        const term=(req.query.search || '').trim();
+        if(term){
+            const rx=searchRegex(term);
+            const match={$or:[{firstName:rx},{lastName:rx},{email:rx},{memberId:rx}]};
+            query.$and=[...(query.$and || []),match];
+        }
 
-        res.status(200).json({data:contacts});
+        const limit=Math.min(100,Math.max(1,parseInt(req.query.limit,10) || 50));
+        const [contacts,total]=await Promise.all([
+            User.find(query).select('firstName lastName role avatarUrl email memberId').sort({firstName:1}).limit(limit),
+            User.countDocuments(query)
+        ]);
+
+        res.status(200).json({data:contacts,total,shown:contacts.length});
     }
     catch(err){
         res.status(500).json({error:err.message});
