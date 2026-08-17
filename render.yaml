@@ -3,7 +3,7 @@ services:
     name: sconnect-backend
     runtime: node
     rootDir: Backend
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: node src/index.js
     envVars:
