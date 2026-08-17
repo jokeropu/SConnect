@@ -2,13 +2,13 @@ const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
 
-const M='../../src/';
-const Lesson=require('../../src/models/lesson');
-const User=require('../../src/models/user');
-const Classroom=require('../../src/models/classroom');
-const Subject=require('../../src/models/subject');
-const TeacherProfile=require('../../src/models/teacherProfile');
-const Notification=require('../../src/models/notification');
+const M='../../';
+const Lesson=require('../../models/lesson');
+const User=require('../../models/user');
+const Classroom=require('../../models/classroom');
+const Subject=require('../../models/subject');
+const TeacherProfile=require('../../models/teacherProfile');
+const Notification=require('../../models/notification');
 
 const made={};
 let failures=0;

@@ -6,7 +6,7 @@ npm test quiz            # only suites whose name contains "quiz"
 npm test marks ownership # several
 ```
 
-`tests/run.js` starts the API itself on port 4010, runs each suite as its own
+`src/tests/run.js` starts the API itself on port 4010, runs each suite as its own
 process, and shuts the server down again. Nothing needs to be running first.
 
 ## They never touch the working database

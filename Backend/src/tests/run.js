@@ -50,7 +50,7 @@ const run = async () => {
     console.log(`database  ${TEST_DB}  (never the working database)`);
     console.log(`server    starting on port ${TEST_PORT}`);
 
-    const server = spawn(process.execPath, [path.join(__dirname, '..', 'src', 'index.js')], {
+    const server = spawn(process.execPath, [path.join(__dirname, '..', 'index.js')], {
         env: { ...process.env, DB_CONNECT_STRING: testUri(), PORT: String(TEST_PORT), NODE_ENV: 'test' },
         stdio: ['ignore', 'pipe', 'pipe']
     });

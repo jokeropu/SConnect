@@ -1,10 +1,10 @@
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 
-const M='../../src/';
-const User=require('../../src/models/user');
-const Counter=require('../../src/models/counter');
-const {MEMBER_ID_PREFIX}=require('../../src/config/appConfig');
+const M='../../';
+const User=require('../../models/user');
+const Counter=require('../../models/counter');
+const {MEMBER_ID_PREFIX}=require('../../config/appConfig');
 
 let failures=0;
 const made=[];

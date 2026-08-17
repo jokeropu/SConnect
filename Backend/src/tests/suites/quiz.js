@@ -1,17 +1,17 @@
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 
-const M='../../src/';
-const Quiz=require('../../src/models/quiz');
-const QuizAttempt=require('../../src/models/quizAttempt');
-const Lesson=require('../../src/models/lesson');
-const User=require('../../src/models/user');
-const Classroom=require('../../src/models/classroom');
-const Subject=require('../../src/models/subject');
-const StudentProfile=require('../../src/models/studentProfile');
-const TeacherProfile=require('../../src/models/teacherProfile');
-const ParentProfile=require('../../src/models/parentProfile');
-const ctrl=require('../../src/controllers/quizController');
+const M='../../';
+const Quiz=require('../../models/quiz');
+const QuizAttempt=require('../../models/quizAttempt');
+const Lesson=require('../../models/lesson');
+const User=require('../../models/user');
+const Classroom=require('../../models/classroom');
+const Subject=require('../../models/subject');
+const StudentProfile=require('../../models/studentProfile');
+const TeacherProfile=require('../../models/teacherProfile');
+const ParentProfile=require('../../models/parentProfile');
+const ctrl=require('../../controllers/quizController');
 
 const made={};
 let failures=0;
