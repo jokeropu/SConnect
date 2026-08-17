@@ -122,7 +122,7 @@ export const messageApi = {
   start: (userId) => unwrap(axiosClient.post('/conversations', { userId })),
   messages: (id, params) => unwrap(axiosClient.get(`/conversations/${id}/messages`, { params })),
   send: (id, payload) => unwrap(axiosClient.post(`/conversations/${id}/messages`, payload)),
-  contacts: () => unwrap(axiosClient.get('/conversations/contacts')),
+  contacts: (params) => unwrap(axiosClient.get('/conversations/contacts', { params })),
 };
 
 export const notificationApi = {

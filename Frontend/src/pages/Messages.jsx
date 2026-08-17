@@ -20,6 +20,8 @@ export default function Messages() {
   const [error, setError] = useState('');
   const [contactsOpen, setContactsOpen] = useState(false);
   const [contacts, setContacts] = useState([]);
+  const [contactSearch, setContactSearch] = useState('');
+  const [contactTotal, setContactTotal] = useState(0);
   const bottomRef = useRef(null);
 
   const loadConversations = useCallback(async () => {
@@ -87,14 +89,20 @@ export default function Messages() {
     setDraft('');
   };
 
-  const openContacts = async () => {
-    setContactsOpen(true);
+  const loadContacts = useCallback(async (term) => {
     try {
-      const response = await messageApi.contacts();
+      const response = await messageApi.contacts(term ? { search: term } : undefined);
       setContacts(response.data);
+      setContactTotal(response.total ?? response.data.length);
     } catch (err) {
       toast.error(errorMessage(err));
     }
+  }, []);
+
+  const openContacts = async () => {
+    setContactsOpen(true);
+    setContactSearch('');
+    await loadContacts('');
   };
 
   const startWith = async (contact) => {
@@ -207,8 +215,25 @@ export default function Messages() {
       </div>
 
       <Modal open={contactsOpen} onClose={() => setContactsOpen(false)} title="Start a conversation" description="You can only message people connected to your classes">
+        <div className="mb-3 flex flex-col gap-1.5">
+          <Input
+            value={contactSearch}
+            onChange={(e) => { setContactSearch(e.target.value); loadContacts(e.target.value); }}
+            placeholder="Search by name, email or ID"
+            autoFocus
+          />
+          {contactTotal > contacts.length && (
+            <span className="text-[11px] text-gray-400">
+              Showing {contacts.length} of {contactTotal} — search to narrow it down
+            </span>
+          )}
+        </div>
+
         {contacts.length === 0 ? (
-          <EmptyState title="Nobody available" detail="Once you are linked to a class your contacts appear here." />
+          <EmptyState
+            title={contactSearch ? 'Nobody matches that' : 'Nobody available'}
+            detail={contactSearch ? 'Try a different name or ID.' : 'Once you are linked to a class your contacts appear here.'}
+          />
         ) : (
           <div className="flex flex-col">
             {contacts.map((contact) => (
