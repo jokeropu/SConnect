@@ -1,15 +1,15 @@
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 
-const M='../../src/';
-const User=require('../../src/models/user');
-const Classroom=require('../../src/models/classroom');
-const Subject=require('../../src/models/subject');
-const Lesson=require('../../src/models/lesson');
-const StudentProfile=require('../../src/models/studentProfile');
-const TeacherProfile=require('../../src/models/teacherProfile');
-const ParentProfile=require('../../src/models/parentProfile');
-const {contactList,canMessage}=require('../../src/controllers/messageController');
+const M='../../';
+const User=require('../../models/user');
+const Classroom=require('../../models/classroom');
+const Subject=require('../../models/subject');
+const Lesson=require('../../models/lesson');
+const StudentProfile=require('../../models/studentProfile');
+const TeacherProfile=require('../../models/teacherProfile');
+const ParentProfile=require('../../models/parentProfile');
+const {contactList,canMessage}=require('../../controllers/messageController');
 
 const made={users:[],other:[]};
 let failures=0;
