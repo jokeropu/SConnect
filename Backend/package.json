@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
+    "test": "node tests/run.js",
     "seed:admin": "node src/scripts/seedAdmin.js",
-    "seed:demo": "node src/scripts/seedDemoData.js"
+    "seed:demo": "node src/scripts/seedDemoData.js",
+    "seed:school": "node src/scripts/seedSchool.js",
+    "seed:history": "node src/scripts/seedHistory.js"
   },
   "keywords": [],
   "author": "",
