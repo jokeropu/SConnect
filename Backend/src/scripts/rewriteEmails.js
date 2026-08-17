@@ -19,7 +19,6 @@ const run = async () => {
         return;
     }
 
-    // everything already on the target domain is reserved before we start
     const taken = new Set(
         (await User.find({ email: new RegExp(`@${TO_DOMAIN.replace('.', '\\.')}$`, 'i') }).select('email').lean())
             .map((u) => u.email.toLowerCase())
@@ -35,8 +34,6 @@ const run = async () => {
         const local = user.email.split('@')[0];
         let candidate = `${local}@${TO_DOMAIN}`.toLowerCase();
 
-        // three subdomains collapse into one, so a student and a parent who
-        // share a name would otherwise land on the same address
         let n = 2;
         if (taken.has(candidate)) {
             while (taken.has(`${local}${n}@${TO_DOMAIN}`.toLowerCase())) n++;
@@ -45,7 +42,6 @@ const run = async () => {
         }
         taken.add(candidate);
 
-        // email is immutable in the schema, so this goes through the driver
         await User.collection.updateOne({ _id: user._id }, { $set: { email: candidate } });
         changed++;
     }

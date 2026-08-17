@@ -100,7 +100,6 @@ const run = async () => {
     }
 
     const lessons = await Lesson.find({}).select('classId subjectId teacherId');
-    // who teaches what, where
     const teacherFor = {};
     for (const l of lessons) {
         teacherFor[`${l.classId}|${l.subjectId}`] = l.teacherId;
@@ -110,12 +109,8 @@ const run = async () => {
     const roster = {};
     profiles.forEach((p) => { (roster[p.classId] = roster[p.classId] || []).push(p.userId); });
 
-    // ---------- latent traits: what makes the data cohere ----------
     const trait = {};
     for (const p of profiles) {
-        // One latent disposition feeds both attainment and attendance. Drawing
-        // them independently makes a student who never turns up top the class,
-        // and every screen then contradicts every other.
         const core = gauss(0, 1);
         trait[p.userId] = {
             ability: clamp(0.66 + 0.12 * core + gauss(0, 0.09), 0.22, 0.97),
@@ -137,7 +132,6 @@ const run = async () => {
     const days = schoolDays(SCHOOL_DAYS);
     console.log(`term            ${iso(days[0])} to ${iso(days[days.length - 1])}, ${days.length} school days`);
 
-    // ---------- attendance ----------
     const sheets = [];
     for (const c of classes) {
         const head = c.supervisorId;
@@ -157,7 +151,6 @@ const run = async () => {
     await Attendance.insertMany(sheets, { ordered: false });
     console.log(`attendance      ${sheets.length} registers`);
 
-    // ---------- exams ----------
     const examDocs = [];
     const examPlan = [];
     for (let grade = 1; grade <= 10; grade++) {
@@ -173,7 +166,6 @@ const run = async () => {
                 .filter(Boolean))];
             if (candidates.length === 0) continue;
 
-            // one teacher owning the grade sets both papers; otherwise they rotate
             const midSetter = candidates[0];
             const finalSetter = candidates.length > 1 ? candidates[1 % candidates.length] : candidates[0];
 
@@ -201,7 +193,6 @@ const run = async () => {
     const savedExams = await Exam.insertMany(examDocs, { ordered: false });
     console.log(`exams           ${savedExams.length}  (mid term + final, one paper per grade per subject)`);
 
-    // ---------- exam results, entered by each section's own subject teacher ----------
     const results = [];
     savedExams.forEach((exam, i) => {
         const { code, classId } = examPlan[i];
@@ -220,7 +211,6 @@ const run = async () => {
     }
     console.log(`exam results    ${results.length}`);
 
-    // ---------- assignments and submissions ----------
     const assignmentDocs = [];
     const assignmentMeta = [];
     for (const c of classes) {
@@ -271,7 +261,6 @@ const run = async () => {
     }
     console.log(`submissions     ${submissions.length}`);
 
-    // ---------- quizzes: one per section per subject, set by that section's teacher ----------
     const quizDocs = [];
     const quizMeta = [];
     for (const c of classes) {
@@ -355,7 +344,6 @@ const run = async () => {
     }
     console.log(`quiz attempts   ${attempts.length}`);
 
-    // ---------- notices, events, materials ----------
     const principal = await User.findOne({ role: 'admin', address: 'Principal' }) || await User.findOne({ role: 'admin' });
     const notices = [
         ['Half-yearly examination schedule', 'The Mid Term timetable is on the notice board. Please check your hall allocation.', true, false],
@@ -403,7 +391,6 @@ const run = async () => {
     await Material.insertMany(materials);
     console.log(`notices/events  ${notices.length} notices, ${events.length} events, ${materials.length} materials`);
 
-    // ---------- a believable handful of recent notifications ----------
     const recentStudents = profiles.slice(0, 40).map((p) => p.userId);
     const notes = recentStudents.map((userId, i) => ({
         userId,

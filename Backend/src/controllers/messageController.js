@@ -216,8 +216,6 @@ const contactList=async(req,res)=>{
             query.$and=[{$or:clauses}];
         }
 
-        // In a full school the list runs to hundreds, so it is capped. Without a
-        // search the tail of the alphabet would simply be unreachable.
         const term=(req.query.search || '').trim();
         if(term){
             const rx=searchRegex(term);

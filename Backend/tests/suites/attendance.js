@@ -1,4 +1,3 @@
-// Attendance notification behaviour over the real HTTP stack.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -29,7 +28,7 @@ const hit=async(method,path,user,body)=>{
         body:body?JSON.stringify(body):undefined
     });
     let json=null;
-    try{ json=await res.json(); }catch{ /* no body */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -49,7 +48,6 @@ const countNotes=(type)=>Notification.countDocuments({userId:made.student._id,ty
         const sid=String(made.student._id);
         const cid=String(made.klass._id);
 
-        // 12 sheets, 9 absent -> 25% attendance, past the 10-record minimum
         for(let i=0;i<12;i++){
             const date=`2026-03-${String(i+1).padStart(2,'0')}`;
             const status=i<9?'absent':'present';
@@ -61,7 +59,6 @@ const countNotes=(type)=>Notification.countDocuments({userId:made.student._id,ty
         check('low-attendance warned at most once during marking',lowAfterMarking<=1,true);
         check('low-attendance warned at least once',lowAfterMarking>=1,true);
 
-        // THE BUG: repeated reads used to create a notification every time
         const before=await countNotes('attendance_low');
         for(let i=0;i<5;i++){
             const r=await hit('GET','/attendance/student',made.student);
@@ -70,31 +67,26 @@ const countNotes=(type)=>Notification.countDocuments({userId:made.student._id,ty
         const after=await countNotes('attendance_low');
         check('5 page views create ZERO new notifications',after-before,0);
 
-        // the warning still reaches the student, now in the response payload
         const view=await hit('GET','/attendance/student',made.student);
         check('response flags belowThreshold',view.json.belowThreshold,true);
         check('response carries the threshold',view.json.threshold,75);
         check('percentage still computed',view.json.percentage,25);
 
-        // re-saving a sheet must not re-announce an already-absent student
         const absentBefore=await countNotes('attendance_absent');
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-01',records:[{studentId:sid,status:'absent'}]});
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-01',records:[{studentId:sid,status:'absent'}]});
         check('re-saving an unchanged sheet sends no absent notices',(await countNotes('attendance_absent'))-absentBefore,0);
 
-        // but a genuinely new absence still notifies
         const beforeNew=await countNotes('attendance_absent');
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-20',records:[{studentId:sid,status:'absent'}]});
         check('a new absence still notifies',(await countNotes('attendance_absent'))-beforeNew,1);
 
-        // present -> absent on an existing sheet counts as newly absent
         const beforeFlip=await countNotes('attendance_absent');
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-21',records:[{studentId:sid,status:'present'}]});
         check('marking present sends no absent notice',(await countNotes('attendance_absent'))-beforeFlip,0);
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-21',records:[{studentId:sid,status:'absent'}]});
         check('correcting present->absent notifies once',(await countNotes('attendance_absent'))-beforeFlip,1);
 
-        // cooldown: further marking inside the window must not re-warn
         const lowBefore=await countNotes('attendance_low');
         await hit('POST','/attendance',made.teacher,{classId:cid,date:'2026-03-22',records:[{studentId:sid,status:'absent'}]});
         check('low-attendance warning is rate limited',(await countNotes('attendance_low'))-lowBefore,0);

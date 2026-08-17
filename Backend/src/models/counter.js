@@ -13,9 +13,6 @@ const counterSchema=new Schema({
     versionKey:false
 });
 
-// A fresh counter starts at 1, which collides if rows numbered by an earlier
-// counter still exist. highestSoFar lets the caller say where the sequence has
-// actually reached, and is consulted only the first time a key is used.
 counterSchema.statics.next=async function(key,highestSoFar){
     const counter=await this.findOneAndUpdate(
         {_id:key},

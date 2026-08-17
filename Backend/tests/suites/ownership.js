@@ -1,4 +1,3 @@
-// Ownership access-control check over the real HTTP stack. Temp docs, cleaned up after.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -33,7 +32,7 @@ const hit=async(method,path,user,body)=>{
         body:body?JSON.stringify(body):undefined
     });
     let json=null;
-    try{ json=await res.json(); }catch{ /* no body */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -45,7 +44,6 @@ const hit=async(method,path,user,body)=>{
         made.subject=await Subject.create({name:tag+'-sub',code:'C'+String(Date.now()).slice(-9)});
         made.klass=await Classroom.create({name:tag+'-class',gradeLevel:9,capacity:30,academicYear:'2026-27'});
 
-        // owner and co-teacher BOTH teach the same class; outsider teaches nothing
         made.owner=await User.create({firstName:'Owner',lastName:'T',email:tag+'o@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
         made.coTeacher=await User.create({firstName:'Coteach',lastName:'T',email:tag+'c@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
         made.outsider=await User.create({firstName:'Outsider',lastName:'T',email:tag+'x@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
@@ -60,7 +58,6 @@ const hit=async(method,path,user,body)=>{
 
         const window={startTime:new Date(Date.now()+3600000),endTime:new Date(Date.now()+7200000)};
 
-        // ---------- EXAM ----------
         const exam=await hit('POST','/exams',made.owner,{title:tag+' exam',subjectId:String(made.subject._id),classId:String(made.klass._id),maxMarks:50,...window});
         check('owner creates exam',exam.code,201);
         const examId=exam.json.exam._id;
@@ -73,14 +70,12 @@ const hit=async(method,path,user,body)=>{
         check('admin CAN edit exam',(await hit('PUT','/exams/'+examId,made.admin,{room:'B12'})).code,200);
         check('exam title actually changed',(await Exam.findById(examId)).title,tag+' renamed');
 
-        // allow-list: classId must not be reassignable, even by the owner
         made.klass2=await Classroom.create({name:tag+'-class2',gradeLevel:10,capacity:30,academicYear:'2026-27'});
         await hit('PUT','/exams/'+examId,made.owner,{classId:String(made.klass2._id)});
         check('exam classId NOT reassignable',String((await Exam.findById(examId)).classId),String(made.klass._id));
         await hit('PUT','/exams/'+examId,made.owner,{createdBy:String(made.coTeacher._id)});
         check('exam createdBy NOT reassignable',String((await Exam.findById(examId)).createdBy),String(made.owner._id));
 
-        // ---------- LESSON ----------
         const lesson=await hit('POST','/lessons',made.owner,{name:tag+' lesson',subjectId:String(made.subject._id),classId:String(made.klass._id),teacherId:String(made.owner._id),day:'monday',startTime:'09:00',endTime:'10:00'});
         check('owner creates lesson',lesson.code,201);
         const lessonId=lesson.json.lesson._id;
@@ -91,7 +86,6 @@ const hit=async(method,path,user,body)=>{
         await hit('PUT','/lessons/'+lessonId,made.owner,{teacherId:String(made.coTeacher._id)});
         check('lesson teacherId NOT reassignable',String((await Lesson.findById(lessonId)).teacherId),String(made.owner._id));
 
-        // ---------- EVENT ----------
         const event=await hit('POST','/events',made.owner,{title:tag+' event',audience:'class',classId:String(made.klass._id),...window});
         check('owner creates class event',event.code,201);
         const eventId=event.json.event._id;
@@ -99,11 +93,9 @@ const hit=async(method,path,user,body)=>{
         check('co-teacher CANNOT edit event',(await hit('PUT','/events/'+eventId,made.coTeacher,{title:'hijacked'})).code,403);
         check('co-teacher CANNOT delete event',(await hit('DELETE','/events/'+eventId,made.coTeacher)).code,403);
         check('owner CAN edit event',(await hit('PUT','/events/'+eventId,made.owner,{title:tag+' renamed'})).code,200);
-        // privilege escalation: teacher must not turn a class event into a school-wide one
         await hit('PUT','/events/'+eventId,made.owner,{audience:'all',classId:null});
         check('event audience NOT escalatable to school-wide',(await Event.findById(eventId)).audience,'class');
 
-        // ---------- QUIZ ----------
         const quiz=await hit('POST','/quizzes',made.owner,{title:tag+' quiz',subjectId:String(made.subject._id),classId:String(made.klass._id),timeLimit:20,...window,
             questions:[{text:'2+2?',type:'single',marks:2,options:[{text:'4',isCorrect:true},{text:'5'}]}]});
         check('owner creates quiz',quiz.code,201);
@@ -117,12 +109,10 @@ const hit=async(method,path,user,body)=>{
         check('owner CAN publish quiz',(await hit('PATCH','/quizzes/'+quizId+'/status',made.owner,{status:'published'})).code,200);
         check('admin CAN close quiz',(await hit('PATCH','/quizzes/'+quizId+'/status',made.admin,{status:'closed'})).code,200);
 
-        // reads must stay class-scoped: co-teacher still sees results, outsider does not
         check('co-teacher CAN still view quiz results',(await hit('GET','/quizzes/'+quizId+'/results',made.coTeacher)).code,200);
         check('outsider CANNOT view quiz results',(await hit('GET','/quizzes/'+quizId+'/results',made.outsider)).code,400);
         check('co-teacher CAN still view quiz detail',(await hit('GET','/quizzes/'+quizId,made.coTeacher)).code,200);
 
-        // owner can still delete their own things
         check('owner CAN delete quiz',(await hit('DELETE','/quizzes/'+quizId,made.owner)).code,200);
         check('owner CAN delete exam',(await hit('DELETE','/exams/'+examId,made.owner)).code,200);
         check('owner CAN delete lesson',(await hit('DELETE','/lessons/'+lessonId,made.owner)).code,200);

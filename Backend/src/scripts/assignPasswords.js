@@ -5,8 +5,6 @@ const bcrypt = require('bcrypt');
 const main = require('../config/db');
 const User = require('../models/user');
 
-// the break-glass account keeps whatever it already has, so a bad run here
-// cannot lock everyone out of the system
 const KEEP = ['admin@gmail.com', 'admin@sconnect.local'];
 const GOOGLE_ONLY = ['sohamval10@gmail.com'];
 const OUT = process.argv[2];

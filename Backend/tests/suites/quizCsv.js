@@ -1,4 +1,3 @@
-// CSV export: content, escaping, spreadsheet-formula injection, authorization.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -34,7 +33,7 @@ const raw=async(method,path,user)=>{
 const hit=async(method,path,user,body)=>{
     const res=await fetch(BASE+path,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(user)},body:body?JSON.stringify(body):undefined});
     let json=null;
-    try{ json=await res.json(); }catch{ /* none */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -49,7 +48,6 @@ const hit=async(method,path,user,body)=>{
         made.tp=await TeacherProfile.create({userId:made.teacher._id,classes:[made.klass._id]});
         made.lesson=await Lesson.create({name:tag+' lesson',subjectId:made.subject._id,classId:made.klass._id,teacherId:made.teacher._id,day:'monday',startTime:'09:00',endTime:'09:45'});
 
-        // adversarial names: a comma, a quote, and a spreadsheet formula
         made.s1=await User.create({firstName:'Ada, Jr',lastName:'"Quoted"',email:tag+'a@x.io',password:'x'.repeat(12),role:'student',status:'approved'});
         made.s2=await User.create({firstName:'=cmd|calc',lastName:'Evil',email:tag+'b@x.io',password:'x'.repeat(12),role:'student',status:'approved'});
         made.s3=await User.create({firstName:'Absent',lastName:'Student',email:tag+'c@x.io',password:'x'.repeat(12),role:'student',status:'approved'});
@@ -67,7 +65,6 @@ const hit=async(method,path,user,body)=>{
         check('quiz created',q.code,201);
         made.quiz=q.json.quiz;
 
-        // s1 gets both right (8), s2 gets one right (5), s3 never attempts
         for(const [student,secondRight] of [[made.s1,true],[made.s2,false]]){
             const st=await hit('POST','/quizzes/'+made.quiz._id+'/start',student);
             const qs=st.json.quiz.questions;
@@ -91,28 +88,23 @@ const hit=async(method,path,user,body)=>{
         check('per-question columns carry their marks',[header[10],header[11]],['Q1 (5)','Q2 (3)']);
         check('column count matches header',lines[1].split(',').length>=10,true);
 
-        // ranked by score, so the 8/8 student is first
         check('top scorer ranked first',lines[1].startsWith('1,'),true);
         check('a comma in a name is quoted, not split',lines[1].includes('"Ada, Jr ""Quoted"""'),true);
         check('quotes inside a field are doubled',lines[1].includes('""Quoted""'),true);
 
-        // the important one: a name starting with = must not stay a live formula
         const evilRow=lines.find((l)=>l.includes('cmd|calc'));
         check('formula-injection name is neutralised',/'=cmd\|calc/.test(evilRow),true);
         check('formula name never begins a raw = cell',/,=cmd/.test(evilRow),false);
 
-        // scores and per-question marks
         check('first row scores 8 of 8',/,8,8,100,/.test(lines[1]),true);
         check('second row scores 5 of 8',/,5,8,62\.5,/.test(lines[2]),true);
         check('per-question marks are exported',lines[1].trim().endsWith(',5,3'),true);
         check('wrong answer shows 0 marks',lines[2].trim().endsWith(',5,0'),true);
 
-        // non-attempters must appear so a teacher can chase them
         const missingRow=lines.find((l)=>l.includes('Not attempted'));
         check('student who never attempted is listed',!!missingRow,true);
         check('non-attempter has no rank',missingRow.startsWith(','),true);
 
-        // authorization must match the JSON results endpoint
         check('student cannot export',(await raw('GET','/quizzes/'+made.quiz._id+'/results/csv',made.s1)).code,403);
         made.outsider=await User.create({firstName:'Out',lastName:'Csv',email:tag+'o@x.io',password:'x'.repeat(12),role:'teacher',status:'approved'});
         made.tpo=await TeacherProfile.create({userId:made.outsider._id,classes:[]});

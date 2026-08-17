@@ -1,5 +1,3 @@
-// Quizzes may only be set by the teacher who takes that subject in that section,
-// or the class head. Unlike exams, each section gets its own quiz.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -29,7 +27,7 @@ const token=(u)=>jwt.sign({_id:u._id,role:u.role},process.env.JWT_ACCESS_KEY,{ex
 const hit=async(method,path,user,body)=>{
     const res=await fetch(BASE+path,{method,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token(user)},body:body?JSON.stringify(body):undefined});
     let json=null;
-    try{ json=await res.json(); }catch{ /* none */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -50,7 +48,6 @@ const hit=async(method,path,user,body)=>{
         made.secB=await Classroom.create({name:tag+'-6B',gradeLevel:6,section:'B',capacity:30,academicYear:'2026-27',supervisorId:made.head._id});
         made.outside=await Classroom.create({name:tag+'-7A',gradeLevel:7,section:'A',capacity:30,academicYear:'2026-27',supervisorId:null});
 
-        // mathsA takes Maths in 6-A only; physA takes Physics in 6-A; mathsOther takes Maths in 7-A
         made.l1=await Lesson.create({name:tag+' m6a',subjectId:made.maths._id,classId:made.secA._id,teacherId:made.mathsA._id,day:'monday',startTime:'09:00',endTime:'09:45'});
         made.l2=await Lesson.create({name:tag+' p6a',subjectId:made.physics._id,classId:made.secA._id,teacherId:made.physA._id,day:'tuesday',startTime:'09:00',endTime:'09:45'});
         made.l3=await Lesson.create({name:tag+' m7a',subjectId:made.maths._id,classId:made.outside._id,teacherId:made.mathsOther._id,day:'monday',startTime:'10:00',endTime:'10:45'});
@@ -64,7 +61,6 @@ const hit=async(method,path,user,body)=>{
         const q=(classId,subjectId)=>({title:tag+' quiz',subjectId:String(subjectId),classId:String(classId),timeLimit:15,...win,
             questions:[{text:'q',type:'single',marks:2,options:[{text:'a',isCorrect:true},{text:'b'}]}]});
 
-        // ---- who may set a quiz ----
         const own=await hit('POST','/quizzes',made.mathsA,q(made.secA._id,made.maths._id));
         check('subject teacher of the section CAN set a quiz',own.code,201);
         made.quiz=own.json.quiz;
@@ -75,7 +71,6 @@ const hit=async(method,path,user,body)=>{
         check('the same subject teacher from another grade CANNOT',
             (await hit('POST','/quizzes',made.mathsOther,q(made.secA._id,made.maths._id))).code,403);
 
-        // ---- class head may set for any section of their grade ----
         const headA=await hit('POST','/quizzes',made.head,q(made.secA._id,made.maths._id));
         check('class head CAN set a quiz for section A',headA.code,201);
         made.quizHeadA=headA.json.quiz;
@@ -87,7 +82,6 @@ const hit=async(method,path,user,body)=>{
         check('class head CANNOT set a quiz outside their grade',
             (await hit('POST','/quizzes',made.head,q(made.outside._id,made.maths._id))).code,403);
 
-        // ---- quizzes are per-section, not shared ----
         check('the two quizzes are separate records for separate sections',
             String(made.quizHeadA.classId)!==String(made.quizHeadB.classId),true);
         check('section A has its own quizzes only',
@@ -95,12 +89,10 @@ const hit=async(method,path,user,body)=>{
         check('section B has its own',
             await Quiz.countDocuments({classId:made.secB._id,title:new RegExp(tag,'i')}),1);
 
-        // ---- editing still follows creator / class head ----
         check('creator CAN edit their quiz',(await hit('PUT','/quizzes/'+made.quiz._id,made.mathsA,{title:tag+' edited'})).code,200);
         check('class head CAN edit it too',(await hit('PUT','/quizzes/'+made.quiz._id,made.head,{timeLimit:20})).code,200);
         check('another subject teacher CANNOT edit it',(await hit('PUT','/quizzes/'+made.quiz._id,made.physA,{timeLimit:1})).code,403);
 
-        // ---- the physics teacher can set a physics quiz for the same section ----
         const phys=await hit('POST','/quizzes',made.physA,q(made.secA._id,made.physics._id));
         check('physics teacher CAN set a physics quiz there',phys.code,201);
         made.quizPhys=phys.json.quiz;

@@ -18,7 +18,7 @@ const waitForServer = async (attempts = 60) => {
         try {
             const res = await fetch(`http://localhost:${TEST_PORT}/health`);
             if (res.ok) return true;
-        } catch { /* not up yet */ }
+        } catch {}
         await new Promise((r) => setTimeout(r, 500));
     }
     return false;

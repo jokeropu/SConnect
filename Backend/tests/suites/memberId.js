@@ -1,5 +1,3 @@
-// memberId: format, immutability, per-role prefixes, and — the one that matters —
-// that concurrent creation never issues the same number twice.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 
@@ -30,7 +28,6 @@ const mk=async(tag,role,n)=>{
     const year=new Date().getFullYear();
 
     try{
-        // ---- format and prefixes ----
         const roles=['admin','teacher','student','parent'];
         for(const role of roles){
             const u=await mk(tag,role,1);
@@ -39,7 +36,6 @@ const mk=async(tag,role,n)=>{
             check(`${role} id is zero padded to 4`,/-\d{4}$/.test(u.memberId),true);
         }
 
-        // ---- sequence advances per role, independently ----
         const t2=await mk(tag,'teacher',2);
         const t3=await mk(tag,'teacher',3);
         const seq=(id)=>Number(id.split('-').pop());
@@ -49,7 +45,6 @@ const mk=async(tag,role,n)=>{
         check('student sequence is separate from teacher',
             seq(s2.memberId)<seq(t3.memberId) || s2.memberId.startsWith('STU'),true);
 
-        // ---- THE ONE THAT MATTERS: 60 users created in parallel ----
         const before=(await Counter.findById(`member:TCH:${year}`))?.seq || 0;
         const batch=await Promise.all(
             Array.from({length:60},(_,i)=>User.create({
@@ -70,11 +65,8 @@ const mk=async(tag,role,n)=>{
         const after=(await Counter.findById(`member:TCH:${year}`)).seq;
         check('counter advanced by exactly 60',after-before,60);
 
-        // what the naive approach would have done: countDocuments()+1 read the same
-        // value in every parallel call, so all 60 would have collided on one number.
         check('a count-based generator would have collided',new Set(Array(60).fill(before+1)).size,1);
 
-        // ---- immutability ----
         const victim=batch[0];
         victim.memberId='TCH-1999-9999';
         await victim.save();
@@ -82,13 +74,11 @@ const mk=async(tag,role,n)=>{
         await User.findByIdAndUpdate(victim._id,{$set:{memberId:'HACK-0001'}});
         check('cannot be changed by findByIdAndUpdate',(await User.findById(victim._id)).memberId,ids[0]);
 
-        // ---- an id supplied by the caller is honoured, not overwritten ----
         const explicit=await User.create({firstName:'Given',lastName:'Id',email:tag+'given@x.io',
             password:'x'.repeat(12),role:'teacher',status:'approved',memberId:'TCH-2000-0777'});
         made.push(explicit._id);
         check('an explicitly supplied id is kept',explicit.memberId,'TCH-2000-0777');
 
-        // ---- uniqueness is enforced by the database, not just the generator ----
         let dupBlocked=false;
         try{
             const dup=await User.create({firstName:'Dupe',lastName:'Id',email:tag+'dupe@x.io',

@@ -1,6 +1,3 @@
-// Proves the rewritten contactList returns exactly the same people the old
-// per-candidate canMessage loop would have, and that its query count no longer
-// scales with the number of users.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 
@@ -30,7 +27,6 @@ const call=async(user,search)=>{
     return payload.data;
 };
 
-// Independently recompute the allowed set the slow way, straight from canMessage.
 const expectedFor=async(me,everyone)=>{
     const allowed=[];
     for(const u of everyone){
@@ -79,14 +75,12 @@ const mkUser=async(tag,role,name)=>{
 
         const everyone=await User.find({email:new RegExp('^'+tag,'i')});
 
-        // ---- equivalence with the old per-candidate logic, per role ----
         for(const [label,me] of [['teacher',teachX],['student',studX],['parent',parentX],['admin',admin]]){
             const got=(await call(me,tag)).map((u)=>String(u._id)).filter((id)=>everyone.some((u)=>String(u._id)===id)).sort();
             const want=await expectedFor(me,everyone);
             check(`${label} contact set matches canMessage exactly`,got,want);
         }
 
-        // ---- spot-check the actual membership, so a shared bug can't hide ----
         const teacherNames=(await call(teachX,tag)).filter((u)=>everyone.some((e)=>String(e._id)===String(u._id))).map((u)=>u.firstName).sort();
         check('teacher sees own students and their parents, plus staff',teacherNames,['Adminone','Parentx','Studx','Teachy']);
 
@@ -96,7 +90,6 @@ const mkUser=async(tag,role,name)=>{
         const parentNames=(await call(parentX,tag)).filter((u)=>everyone.some((e)=>String(e._id)===String(u._id))).map((u)=>u.firstName).sort();
         check("parent sees only admins and their child's teachers",parentNames,['Adminone','Teachx']);
 
-        // ---- query count must not scale with the number of users ----
         let ops=0;
         mongoose.set('debug',()=>{ ops++; });
 
@@ -115,7 +108,6 @@ const mkUser=async(tag,role,name)=>{
         check('student stays under 10 queries',studentOps<10,true);
         check('admin needs a constant two queries (list + total)',adminOps,2);
 
-        // the 40 padding teachers must now all appear for a teacher
         const after=(await call(teachX,tag)).filter((u)=>everyone.concat(made.users).some((e)=>String(e._id)===String(u._id)));
         check('padding teachers are all included',after.length,44);
     }

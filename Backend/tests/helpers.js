@@ -5,8 +5,6 @@ const jwt = require('jsonwebtoken');
 const TEST_DB = process.env.TEST_DB_NAME || 'sconnect_test';
 const TEST_PORT = Number(process.env.TEST_PORT || 4010);
 
-// Tests must never touch the working database. This swaps the database name in
-// the connection string, so they run on the same cluster but their own schema.
 const testUri = () => {
     const uri = process.env.DB_CONNECT_STRING;
     if (!uri) throw new Error('DB_CONNECT_STRING is not set');
@@ -39,7 +37,7 @@ const hit = async (method, path, user, body) => {
         body: body ? JSON.stringify(body) : undefined
     });
     let json = null;
-    try { json = await res.json(); } catch { /* empty body */ }
+    try { json = await res.json(); } catch {}
     return { code: res.status, json };
 };
 
@@ -49,8 +47,6 @@ const raw = async (method, path, user) => {
     return { code: res.status, headers: res.headers, bytes, body: bytes.toString('utf8') };
 };
 
-// Every fixture is tagged, and teardown matches case-insensitively because the
-// User model lowercases email. Getting that wrong once left 76 accounts behind.
 const tag = (prefix) => `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 const rx = (t) => new RegExp(`^${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i');
 

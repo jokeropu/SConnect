@@ -1,4 +1,3 @@
-// Exercises the real HTTP stack (auth + authorize middleware) for quiz role gating.
 const mongoose=require('mongoose');
 const {connect,disconnect,BASE}=require('../helpers');
 const jwt=require('jsonwebtoken');
@@ -34,7 +33,7 @@ const hit=async(method,path,user,body)=>{
         body:body?JSON.stringify(body):undefined
     });
     let json=null;
-    try{ json=await res.json(); }catch{ /* empty body */ }
+    try{ json=await res.json(); }catch{}
     return {code:res.status,json};
 };
 
@@ -53,7 +52,6 @@ const hit=async(method,path,user,body)=>{
         made.sp=await StudentProfile.create({userId:made.student._id,classId:made.klass._id});
         made.pp=await ParentProfile.create({userId:made.parent._id,children:[made.student._id]});
 
-        // teacher creates + publishes a quiz over HTTP
         const created=await hit('POST','/quizzes',made.teacher,{
             title:tag+' quiz',
             subjectId:String(made.subject._id),
@@ -68,7 +66,6 @@ const hit=async(method,path,user,body)=>{
         made.quiz=created.json.quiz;
         const qid=String(made.quiz._id);
 
-        // role gating on write + results endpoints
         check('student cannot create quiz',(await hit('POST','/quizzes',made.student,{})).code,403);
         check('parent cannot create quiz',(await hit('POST','/quizzes',made.parent,{})).code,403);
         check('student cannot delete quiz',(await hit('DELETE','/quizzes/'+qid,made.student)).code,403);
@@ -78,11 +75,9 @@ const hit=async(method,path,user,body)=>{
         check('parent denied teacher results',(await hit('GET','/quizzes/'+qid+'/results',made.parent)).code,403);
         check('teacher allowed results',(await hit('GET','/quizzes/'+qid+'/results',made.teacher)).code,200);
 
-        // only students can attempt
         check('teacher cannot start attempt',(await hit('POST','/quizzes/'+qid+'/start',made.teacher)).code,403);
         check('parent cannot start attempt',(await hit('POST','/quizzes/'+qid+'/start',made.parent)).code,403);
 
-        // student takes the quiz over HTTP
         const start=await hit('POST','/quizzes/'+qid+'/start',made.student);
         check('student can start',start.code,200);
         check('answer key hidden at start',JSON.stringify(start.json.quiz).includes('isCorrect'),false);
@@ -92,15 +87,12 @@ const hit=async(method,path,user,body)=>{
         check('student submit ok',sub.code,200);
         check('scored 5/5',[sub.json.score,sub.json.totalMarks],[5,5]);
 
-        // answer key stays hidden while quiz is open
         const openGet=await hit('GET','/quizzes/'+qid,made.student);
         check('answer key hidden while open',JSON.stringify(openGet.json.quiz.questions).includes('isCorrect'),false);
         check('review blocked while open',(await hit('GET','/quizzes/'+qid+'/review',made.student)).code,403);
 
-        // teacher closes it
         check('teacher can close',(await hit('PATCH','/quizzes/'+qid+'/status',made.teacher,{status:'closed'})).code,200);
 
-        // now answers are visible to the class
         const rev=await hit('GET','/quizzes/'+qid+'/review',made.student);
         check('review open after close',rev.code,200);
         check('answer key visible after close',rev.json.quiz.questions[0].options.some((o)=>o.isCorrect),true);
