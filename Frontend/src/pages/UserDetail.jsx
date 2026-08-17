@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { Mail, Phone, MapPin, Cake, Droplet } from 'lucide-react';
+import { Mail, Phone, MapPin, Cake, Droplet, IdCard, Hash } from 'lucide-react';
 import { userApi } from '../api/endpoints';
 import { errorMessage } from '../api/axiosClient';
 import { Card, Loader, Note, Avatar, Chip } from '../design/primitives';
-import { formatDate, fullName, ROLE_LABEL, STATUS_TONE } from '../design/cn';
+import { formatDate, fullName, rollPosition, ROLE_LABEL, STATUS_TONE } from '../design/cn';
 
 const Detail = ({ icon: Icon, label, value }) => (
   <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -52,6 +52,7 @@ export default function UserDetail() {
         </div>
 
         <div className="mt-2 flex flex-col gap-2 border-t border-gray-100 pt-4">
+          <Detail icon={IdCard} label="ID" value={user.memberId} />
           <Detail icon={Mail} label="Email" value={user.email} />
           <Detail icon={Phone} label="Phone" value={user.phone} />
           <Detail icon={MapPin} label="Address" value={user.address} />
@@ -65,7 +66,7 @@ export default function UserDetail() {
 
         {user.role === 'student' && (
           <div className="mt-4 flex flex-col gap-3">
-            <Detail icon={Mail} label="Roll number" value={profile?.rollNumber} />
+            <Detail icon={Hash} label="Roll number" value={rollPosition(profile?.rollNumber)} />
             <Detail icon={Mail} label="Class" value={profile?.classId?.name} />
             <Detail icon={Mail} label="Parent" value={profile?.parentId ? fullName(profile.parentId) : null} />
             <div className="flex gap-2">

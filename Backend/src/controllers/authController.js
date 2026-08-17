@@ -19,6 +19,7 @@ const googleClient=new OAuth2Client(process.env.OAUTH_CLIENT_ID);
 
 const publicUser=(user)=>({
     _id:user._id,
+    memberId:user.memberId,
     firstName:user.firstName,
     lastName:user.lastName,
     email:user.email,

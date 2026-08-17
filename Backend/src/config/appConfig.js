@@ -7,6 +7,7 @@ module.exports={
     RESET_TOKEN_MS:30*60*1000,
     ITEMS_PER_PAGE:10,
     ROLES:['admin','teacher','student','parent'],
+    MEMBER_ID_PREFIX:{admin:'ADM',teacher:'TCH',student:'STU',parent:'PAR'},
     USER_STATUS:['pending','approved','suspended'],
     DAYS:['monday','tuesday','wednesday','thursday','friday','saturday'],
     ATTENDANCE_STATUS:['present','absent','late','excused'],

@@ -1,6 +1,7 @@
 const mongoose=require('mongoose');
 const {Schema}=mongoose;
-const {ROLES,USER_STATUS}=require('../config/appConfig');
+const {ROLES,USER_STATUS,MEMBER_ID_PREFIX}=require('../config/appConfig');
+const Counter=require('./counter');
 
 const userSchema=new Schema({
     firstName:{
@@ -32,6 +33,12 @@ const userSchema=new Schema({
         type:String,
         enum:ROLES,
         default:'student'
+    },
+    memberId:{
+        type:String,
+        unique:true,
+        sparse:true,
+        immutable:true
     },
     status:{
         type:String,
@@ -88,6 +95,22 @@ const userSchema=new Schema({
     }
 },{
     timestamps:true
+});
+
+userSchema.pre('save',async function(next){
+    if(!this.isNew || this.memberId){
+        return next();
+    }
+    try{
+        const prefix=MEMBER_ID_PREFIX[this.role] || 'USR';
+        const year=new Date().getFullYear();
+        const seq=await Counter.next(`member:${prefix}:${year}`);
+        this.memberId=`${prefix}-${year}-${String(seq).padStart(4,'0')}`;
+        next();
+    }
+    catch(err){
+        next(err);
+    }
 });
 
 userSchema.index({role:1,status:1});

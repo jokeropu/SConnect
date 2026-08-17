@@ -15,6 +15,10 @@ export const ownsRecord = (user, owner) => {
   return String(owner?._id || owner) === String(user._id);
 };
 
+// Roll numbers are stored scoped to their section ("10-A-07") so they stay
+// unique school-wide, but a register only ever shows the position.
+export const rollPosition = (rollNumber) => (rollNumber ? String(rollNumber).split('-').pop() : null);
+
 export const ROLE_LABEL = {
   admin: 'Admin',
   teacher: 'Teacher',
