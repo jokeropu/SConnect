@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { Search, ChevronDown, Inbox } from 'lucide-react';
+import { Search, ChevronDown, Inbox, AlertCircle, CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { cn } from './cn';
 
 const BTN_TONE = {
@@ -131,20 +131,31 @@ export const FormRow = ({ label, hint, error, required, children, className }) =
 );
 
 const NOTE_TONE = {
-  error: 'border-red-200 bg-red-50 text-red-700',
+  error: 'border-red-300 bg-red-50 text-red-800',
   success: 'border-green-200 bg-green-50 text-green-700',
   warning: 'border-yellow-200 bg-lama-yellow-light text-yellow-800',
   info: 'border-indigo-200 bg-lama-purple-light text-indigo-700',
 };
 
-export const Note = ({ tone = 'info', children, className }) => (
-  <div
-    className={cn('rounded-md border px-3 py-2 text-xs', NOTE_TONE[tone], className)}
-    role={tone === 'error' ? 'alert' : 'status'}
-  >
-    {children}
-  </div>
-);
+const NOTE_ICON = {
+  error: AlertCircle,
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  info: Info,
+};
+
+export const Note = ({ tone = 'info', children, className }) => {
+  const Icon = NOTE_ICON[tone] || Info;
+  return (
+    <div
+      className={cn('flex items-start gap-2 rounded-md border px-3 py-2 text-xs', NOTE_TONE[tone], className)}
+      role={tone === 'error' ? 'alert' : 'status'}
+    >
+      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden="true" />
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+};
 
 export const Loader = ({ label = 'Loading', className }) => (
   <div className={cn('flex flex-col items-center gap-3 py-16', className)}>
