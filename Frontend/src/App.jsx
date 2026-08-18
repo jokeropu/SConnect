@@ -42,7 +42,7 @@ const STAFF = ['admin', 'teacher'];
 
 function App() {
   const dispatch = useDispatch();
-  const { isAuthenticated, loading } = useSelector((state) => state.auth);
+  const { isAuthenticated, booting } = useSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(checkAuth());
@@ -56,7 +56,7 @@ function App() {
     return undefined;
   }, [isAuthenticated]);
 
-  if (loading) {
+  if (booting) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader label="Loading SConnect" />
