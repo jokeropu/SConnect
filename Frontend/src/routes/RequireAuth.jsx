@@ -4,10 +4,10 @@ import AppShell from '../design/AppShell';
 import { EmptyState, Loader } from '../design/primitives';
 
 export default function RequireAuth({ roles, children }) {
-  const { isAuthenticated, loading, user } = useSelector((state) => state.auth);
+  const { isAuthenticated, booting, user } = useSelector((state) => state.auth);
   const location = useLocation();
 
-  if (loading) {
+  if (booting) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader label="Loading SConnect" />
