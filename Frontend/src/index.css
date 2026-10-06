@@ -153,7 +153,6 @@ body {
 
 .rbc-time-content {
   border: none !important;
-  /* Room for the first hour label, which now straddles its line. */
   padding-top: 10px;
 }
 
@@ -165,8 +164,6 @@ body {
   padding: 0px 20px !important;
 }
 
-/* Centre each hour label on its gridline, so "9:00 AM" reads against the
-   line a 9:00 class starts on rather than the space below it. */
 .rbc-time-gutter .rbc-label {
   display: inline-block;
   position: relative;
@@ -189,8 +186,6 @@ body {
   padding: 6px 10px !important;
 }
 
-/* Keep each event on its real start time: inset horizontally only, and
-   leave a hairline gap at the bottom so back-to-back periods stay distinct. */
 .rbc-day-slot .rbc-event {
   flex-flow: column nowrap !important;
   margin-left: 6px !important;
@@ -203,23 +198,27 @@ body {
   min-width: 0;
 }
 
-.lesson-event__subject,
-.lesson-event__room {
+.lesson-event__meta,
+.lesson-event__subject {
   display: block;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  line-height: 1.35;
+}
+
+.lesson-event__meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 2px;
 }
 
 .lesson-event__subject {
   font-weight: 500;
-  line-height: 1.3;
 }
 
-.lesson-event__room {
-  font-size: 12px;
-  color: #6b7280;
-  line-height: 1.3;
+.rbc-day-slot .rbc-event-label {
+  display: none !important;
 }
 
 .rbc-event:nth-child(1) { background-color: #e2f8ff !important; }

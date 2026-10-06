@@ -20,10 +20,14 @@ const toDate = (day, time) => {
 };
 
 function LessonEvent({ event }) {
+  const time = `${moment(event.start).format('h:mm')}–${moment(event.end).format('h:mm A')}`;
   return (
     <>
+      <span className="lesson-event__meta">
+        {time}
+        {event.room ? ` · ${event.room}` : ''}
+      </span>
       <span className="lesson-event__subject">{event.subject}</span>
-      {event.room && <span className="lesson-event__room">{event.room}</span>}
     </>
   );
 }
