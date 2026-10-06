@@ -119,7 +119,10 @@ function StudentView({ data, heading }) {
         </div>
 
         <div className="h-[750px] rounded-md bg-white p-4">
-          <h1 className="text-xl font-semibold">{heading || 'My schedule'}</h1>
+          <h1 className="text-xl font-semibold">
+            {heading || 'My schedule'}
+            {data.className && <span className="ml-2 text-base font-normal text-gray-500">· Class {data.className}</span>}
+          </h1>
           <BigCalendar lessons={data.timetable} />
         </div>
       </div>

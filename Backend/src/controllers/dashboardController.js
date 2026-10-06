@@ -124,7 +124,8 @@ const teacherDashboard=async(req,res)=>{
 const studentPayload=async(studentId)=>{
     const classId=await classIdForStudent(studentId);
 
-    const [lessons,assignments,submissions,results,sheets,announcements,events]=await Promise.all([
+    const [classroom,lessons,assignments,submissions,results,sheets,announcements,events]=await Promise.all([
+        classId?Classroom.findById(classId).select('name'):null,
         Lesson.find({classId}).populate('subjectId','name code').populate('teacherId','firstName lastName').sort({day:1,startTime:1}),
         Assignment.find({classId,dueDate:{$gte:new Date()}}).populate('subjectId','name').sort({dueDate:1}).limit(5),
         Submission.find({studentId}),
@@ -145,6 +146,7 @@ const studentPayload=async(studentId)=>{
 
     return {
         classId,
+        className:classroom?.name||null,
         counts:{
             lessons:lessons.length,
             pendingAssignments:assignments.length,

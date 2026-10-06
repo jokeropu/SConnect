@@ -174,9 +174,22 @@ body {
 .rbc-event {
   border: none !important;
   color: black !important;
-  padding: 10px !important;
-  margin: 10px !important;
-  width: 99% !important;
+  padding: 6px 10px !important;
+}
+
+/* Keep each event on its real start time: inset horizontally only, and
+   leave a hairline gap at the bottom so back-to-back periods stay distinct. */
+.rbc-day-slot .rbc-event {
+  flex-flow: column nowrap !important;
+  margin-left: 6px !important;
+  width: calc(100% - 12px) !important;
+  border-bottom: 2px solid transparent !important;
+  background-clip: padding-box !important;
+}
+
+.rbc-day-slot .rbc-event-content {
+  white-space: normal;
+  word-break: break-word;
 }
 
 .rbc-event:nth-child(1) { background-color: #e2f8ff !important; }
@@ -190,5 +203,7 @@ body {
 
 .rbc-event-label {
   color: gray !important;
-  margin-bottom: 5px;
+  width: auto !important;
+  padding-right: 0 !important;
+  margin-bottom: 2px;
 }
