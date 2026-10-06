@@ -73,6 +73,7 @@ export default function BigCalendar({ lessons }) {
       min: atMinutes(sorted[0]),
       max: atMinutes(sorted[sorted.length - 1]),
       slotPropGetter: (date) => (isBoundary(date) ? { className: 'rbc-period-start' } : {}),
+      endLabel: `"${moment(atMinutes(sorted[sorted.length - 1])).format('h:mm A')}"`,
       formats: { timeGutterFormat: (date) => (isBoundary(date) ? moment(date).format('h:mm A') : '') },
     };
   }, [lessons]);
@@ -87,7 +88,7 @@ export default function BigCalendar({ lessons }) {
       views={['work_week', 'day']}
       view={view}
       onView={setView}
-      style={{ height: '98%' }}
+      style={{ height: '98%', '--rbc-end-label': grid.endLabel }}
       step={15}
       timeslots={1}
       min={grid.min}

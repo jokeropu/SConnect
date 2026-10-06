@@ -154,6 +154,7 @@ body {
 .rbc-time-content {
   border: none !important;
   padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .rbc-time-gutter.rbc-time-column {
@@ -189,6 +190,24 @@ body {
 
 .rbc-time-column .rbc-timeslot-group:last-child {
   border-bottom: 1px solid #ddd !important;
+}
+
+.rbc-time-gutter .rbc-time-slot.rbc-period-start,
+.rbc-time-gutter .rbc-timeslot-group:last-child {
+  border: none !important;
+}
+
+.rbc-time-gutter .rbc-timeslot-group:last-child {
+  position: relative;
+}
+
+.rbc-time-gutter .rbc-timeslot-group:last-child::after {
+  content: var(--rbc-end-label, "");
+  position: absolute;
+  right: 20px;
+  bottom: 0;
+  transform: translateY(50%);
+  line-height: 1.4;
 }
 
 .rbc-day-slot {
