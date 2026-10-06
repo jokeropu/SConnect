@@ -34,6 +34,13 @@ function LessonEvent({ event }) {
 
 const components = { event: LessonEvent };
 
+const toMinutes = (time) => {
+  const [hours, minutes] = String(time || '09:00').split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+const atMinutes = (total) => new Date(2025, 0, 1, Math.floor(total / 60), total % 60, 0);
+
 export default function BigCalendar({ lessons }) {
   const [view, setView] = useState(Views.WORK_WEEK);
 
@@ -50,6 +57,26 @@ export default function BigCalendar({ lessons }) {
     [lessons]
   );
 
+  const grid = useMemo(() => {
+    const boundaries = new Set();
+    for (const lesson of lessons || []) {
+      boundaries.add(toMinutes(lesson.startTime));
+      boundaries.add(toMinutes(lesson.endTime));
+    }
+    if (boundaries.size === 0) {
+      for (let hour = 8; hour <= 17; hour++) boundaries.add(hour * 60);
+    }
+    const sorted = [...boundaries].sort((a, b) => a - b);
+    const isBoundary = (date) => boundaries.has(date.getHours() * 60 + date.getMinutes());
+
+    return {
+      min: atMinutes(sorted[0]),
+      max: atMinutes(sorted[sorted.length - 1]),
+      slotPropGetter: (date) => (isBoundary(date) ? { className: 'rbc-period-start' } : {}),
+      formats: { timeGutterFormat: (date) => (isBoundary(date) ? moment(date).format('h:mm A') : '') },
+    };
+  }, [lessons]);
+
   return (
     <Calendar
       localizer={localizer}
@@ -61,8 +88,12 @@ export default function BigCalendar({ lessons }) {
       view={view}
       onView={setView}
       style={{ height: '98%' }}
-      min={new Date(2025, 0, 1, 8, 0, 0)}
-      max={new Date(2025, 0, 1, 17, 0, 0)}
+      step={15}
+      timeslots={1}
+      min={grid.min}
+      max={grid.max}
+      slotPropGetter={grid.slotPropGetter}
+      formats={grid.formats}
     />
   );
 }
