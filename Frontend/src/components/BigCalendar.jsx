@@ -19,6 +19,17 @@ const toDate = (day, time) => {
   return base.hour(hours).minute(minutes).second(0).toDate();
 };
 
+function LessonEvent({ event }) {
+  return (
+    <>
+      <span className="lesson-event__subject">{event.subject}</span>
+      {event.room && <span className="lesson-event__room">{event.room}</span>}
+    </>
+  );
+}
+
+const components = { event: LessonEvent };
+
 export default function BigCalendar({ lessons }) {
   const [view, setView] = useState(Views.WORK_WEEK);
 
@@ -27,6 +38,8 @@ export default function BigCalendar({ lessons }) {
       (lessons || []).map((lesson) => ({
         id: lesson._id,
         title: `${lesson.subjectId?.name || lesson.name}${lesson.room ? ` · ${lesson.room}` : ''}`,
+        subject: lesson.subjectId?.name || lesson.name,
+        room: lesson.room,
         start: toDate(lesson.day, lesson.startTime),
         end: toDate(lesson.day, lesson.endTime),
       })),
@@ -37,6 +50,7 @@ export default function BigCalendar({ lessons }) {
     <Calendar
       localizer={localizer}
       events={events}
+      components={components}
       startAccessor="start"
       endAccessor="end"
       views={['work_week', 'day']}
