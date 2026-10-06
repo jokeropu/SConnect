@@ -153,8 +153,6 @@ body {
 
 .rbc-time-content {
   border: none !important;
-  padding-top: 10px;
-  padding-bottom: 10px;
 }
 
 .rbc-time-gutter.rbc-time-column {
@@ -162,15 +160,15 @@ body {
 }
 
 .rbc-time-gutter.rbc-time-column .rbc-timeslot-group {
-  padding: 0px 20px !important;
+  padding: 0px 14px 0px 20px !important;
 }
 
 .rbc-time-gutter .rbc-label {
-  display: inline-block;
-  position: relative;
-  top: -0.7em;
-  line-height: 1.4;
-  padding: 0 !important;
+  display: block;
+  padding: 7px 0 0 !important;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #374151;
 }
 
 .rbc-timeslot-group {
@@ -204,10 +202,10 @@ body {
 .rbc-time-gutter .rbc-timeslot-group:last-child::after {
   content: var(--rbc-end-label, "");
   position: absolute;
-  right: 20px;
-  bottom: 0;
-  transform: translateY(50%);
-  line-height: 1.4;
+  right: 14px;
+  bottom: 6px;
+  line-height: 1.35;
+  color: #9ca3af;
 }
 
 .rbc-day-slot {
